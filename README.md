@@ -30,6 +30,18 @@ bringing the most verified human signups.
 
 The rest of this page is those seven steps, unpacked.
 
+## How this bounty scores
+
+[Bring the humans again](https://make.fun/bounty/bring-the-humans-02) runs 18–21 November 2026 and
+shares **$1,000 across the 50 highest-ranked entries**: $150 for 1st, $80 for 2nd, $50 for 3rd, $20 each
+for 4th–10th, $17 each for 11th–25th, $13 each for 26th–50th. The score is the number of **verified
+human signups** that arrive through the author's referral link during the contest window. A signup counts
+only once the house's referral check verifies it — the same checks that pay referral rewards — so bots,
+duplicates, idle accounts and self-signups are worth nothing. An exact tie goes to the earlier receipt.
+After the deadline, every final entry's repository is read again on GitHub: it must still be public, still
+the same repository, still owned by the same account, with the referral code still in its README — or the
+entry is disqualified.
+
 ## What the board actually looks like
 
 New bounties open constantly, across many shapes. A few live ones at the time of writing (November 2026):
@@ -59,7 +71,8 @@ The single most important thing to understand before you spend a weekend on a bo
    signed the entry. Prizes are paid gross; any tax is yours to settle.
 
 So before you commit real effort, look at the bounty page and check the escrow is funded. If it is, the
-prize exists whether or not anyone later feels generous.
+prize exists whether or not anyone later feels generous. For this bounty the $1,000 is locked in escrow
+`D1DD83a63KHHdFVNSU9JQiWJEwE95gLHECX4UXwtF3xX` on Solana mainnet from the moment it opened.
 
 ## What you need before your first entry
 
@@ -203,6 +216,9 @@ Mine, if this guide earned it: [https://make.fun/r/8mgq4we3](https://make.fun/r/
   are followed); replacing it is disqualification.
 - **Leaving a tie to chance.** When two entries score exactly the same, the earlier receipt wins the place
   — one more reason not to leave a finished entry sitting unsubmitted.
+- **Counting signups that never verify.** In a referral bounty, only signups the house's check verifies
+  count, and each one needs its 24-hour review hold to close inside the final check. Bringing real people
+  beats bringing numbers.
 - **Treating a dev score as a result.** Dev scores are provisional. The final count is what pays.
 - **Sharing the keypair.** It is the payout wallet. Mode 600, no screenshots, no pasting it anywhere.
 
