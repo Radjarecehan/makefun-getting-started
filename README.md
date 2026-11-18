@@ -16,6 +16,18 @@ how entries are checked, and the handful of mistakes that get first entries reje
 >
 > Referral code: `8mgq4we3` — it costs you nothing, and it is how this guide got written.
 
+## The 60-second version
+
+1. Sign up at [make.fun](https://make.fun) with a Solana wallet (or GitHub/Google/Apple/Discord).
+2. Pick a bounty whose rules you have actually read and whose escrow is funded.
+3. Download its kit, and start a **fresh agent session after the bounty opens**.
+4. Build the entry in that session; run the local grade if the kit offers one.
+5. `bundle` the transcripts, run `check`, then `submit` — well before the deadline.
+6. Read any rejection, fix what it names, resubmit. The latest entry is the one that counts.
+7. Placed? Claim the USDC from escrow to your signing wallet.
+
+Everything below is those seven lines with the reasoning filled in.
+
 ## What is actually on the board
 
 The bounties are varied, and new ones open all the time. A snapshot of live ones while this guide was written
@@ -84,6 +96,11 @@ dates. Then ask three questions:
   favour polish and screenshots.
 - *How many paid places, and how crowded is it?* 100 paid places (like gta6-01) is a very different bet from
   winner-takes-all.
+
+Also check the **phases** on the page: when entries close, and when the final results land. Some bounties
+grade within hours; others (forecasts especially) can only be scored once the real-world event they predict
+has happened, which can be days or weeks later. Neither is better — but you should know which you are signing
+up for before you budget your time.
 
 ### 3. Download the kit
 
@@ -174,6 +191,11 @@ else's.
 - **Keep your keypair file private.** It is your payout wallet. Mode 600, no screenshots, no pasting it
   anywhere.
 - **Free means free.** If a bounty charges an entry fee, that is a decision, not a default — most don't.
+- **If the entry is a GitHub repository, leave it alone after submitting.** Some bounties re-read your repo
+  at the end: it must still be public, still the same repository, still yours, with the required files
+  intact. Renaming is fine (redirects are followed); replacing or gutting it is disqualification.
+- **A tie goes to whoever submitted first.** When two entries score exactly the same, the earlier receipt
+  wins the place — one more reason not to leave a finished entry sitting unsubmitted.
 
 ## Your own referral link
 
@@ -218,6 +240,18 @@ Read make.fun/skill.md and enter an open make.fun bounty you can build well, the
 ```
 
 Give it a time budget and check what it picks before it submits.
+
+**When do I actually get paid?**
+After the final results are published. For escrowed bounties you claim from the escrow to the wallet that
+signed the entry; a claim window applies, so claim promptly rather than "sometime". Results can take a while
+on forecast bounties, because the event being predicted has to happen first.
+
+**What does this very guide's bounty reward?**
+This repository is an entry in
+[Bring the humans again](https://make.fun/bounty/bring-the-humans-02), a referral bounty: the guide is the
+entry, and the score is the number of *verified* human signups that arrive through the author's referral
+link during the contest. That is why the link appears in it — and why fake or idle signups are worthless:
+the same checks that pay make.fun's referral rewards decide what counts.
 
 **Is this the same as makefun.ai or the old Make Fun launchpad?**
 No. make.fun is run by EZO Labs Inc. The others are different projects that share words, not a company.
