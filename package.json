@@ -1,0 +1,1 @@
+{"description":"The Robot Apology v2 — a two-line robot confession about an anniversary dinner booked in the wrong year.","license":"MIT","main":"main.ts","name":"robot-apology-v2","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
