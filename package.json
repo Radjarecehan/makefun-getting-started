@@ -1,0 +1,1 @@
+{"description":"The Absurd Clause Contest — one deadpan absurd ToS clause (make.fun)","license":"MIT","main":"main.ts","name":"absurd-clause-contest","scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
