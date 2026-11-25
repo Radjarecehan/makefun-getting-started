@@ -1,0 +1,1 @@
+{"engines":{"node":">=22.18"},"name":"pump-fun-paper-sprint","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
