@@ -7,16 +7,18 @@
 // in a rising market it rides the strongest names; in chop the tight stop and
 // the momentum filter keep whipsaw trades small.
 //
-//   - Indicators, per symbol over its own closes: EMA(5) and EMA(13), each
+//   - Indicators, per symbol over its own closes: EMA(8) and EMA(21), each
 //     seeded as the mean of its first span of closes, then moving
 //     2 / (span + 1) of the way to each new close. Closes are kept (last 8)
 //     for the 6-bar momentum: (close - close 6 bars ago) / close 6 bars ago.
 //     Indicators read every batch, a warm-up's included; while warming up it
 //     sends no order, and from the first batch after it the rules run on
 //     indicators already seeded.
-//   - Entry, on a bar's close (filled at the next open): EMA(5) above
-//     EMA(13), the 6-bar momentum positive, and the close above EMA(13), on a
-//     symbol it does not hold. A bar whose volume is 0 signals no entry.
+//   - Entry, on a bar's close (filled at the next open): EMA(8) above
+//     EMA(21), the 6-bar momentum positive, and the close above EMA(21), on a
+//     symbol it does not hold — and only while at least 4 of the 7 symbols
+//     trend up, so in a broad downtrend the bot stays in cash instead of
+//     buying every dead-cat bounce. A bar whose volume is 0 signals no entry.
 //   - Exit, the whole position: EMA(5) crosses under EMA(13), or the position
 //     worth at least 25% over its cost at the close, or at least 8% under it.
 //     An exit the market refuses is sent again on the symbol's next bar while
@@ -35,13 +37,16 @@
 
 import { BPS, runBars, type Bar, type BarsState, type BuyInput, type SellInput } from './vendor/makefun-bars.ts';
 
-const FAST_BARS = 5;
-const SLOW_BARS = 13;
+const FAST_BARS = 8;
+const SLOW_BARS = 21;
 const MOMENTUM_BARS = 6;
 /** take-profit +25%: worth 5/4 of its cost. */
 const TAKE = [5n, 4n] as const;
 /** stop-loss -8%: worth 23/25 of its cost. */
 const STOP = [23n, 25n] as const;
+/** Only enter when at least this many symbols trend up: in a broad
+ * downtrend the bot stays in cash instead of buying every dead-cat bounce. */
+const MIN_BREADTH = 4;
 const MAX_POSITIONS = 5;
 const MAX_SLIPPAGE_BPS = 100;
 
@@ -114,8 +119,10 @@ await runBars({
   onBatch(state, batch) {
     const candidates: { symbol: string; momentum: number }[] = [];
     const down = new Set<string>();
+    let breadth = 0;
     for (const bar of batch.bars) {
       const s = push(bar);
+      if (s.now !== null && s.now > 0) breadth++;
       if (s.now !== null && s.gap !== null && s.now < 0 && s.gap >= 0) down.add(bar.symbol);
       if (s.now === null || s.momentum === null || bar.v === '0') continue;
       if (s.fast.value === null || s.slow.value === null) continue;
@@ -125,6 +132,7 @@ await runBars({
       }
     }
     if (state.warmingUp) return [];
+    if (breadth < MIN_BREADTH) candidates.length = 0;
     const { caps, fees } = state.hello;
     const sells: SellInput[] = [];
     const heldCount = state.positions.size;
