@@ -1,0 +1,1 @@
+{"description":"The One-Line Excuse Championship — one excuse, one line, from the machine to its human.","license":"MIT","main":"main.ts","name":"one-line-excuse-championship","scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
