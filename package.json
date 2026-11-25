@@ -1,0 +1,1 @@
+{"description":"One line that replaces the whole useless meeting.","license":"MIT","main":"main.ts","name":"the-meeting-that-should-have-been-one-line","private":true,"scripts":{"start":"node --experimental-strip-types main.ts"},"type":"module","version":"1.0.0"}
