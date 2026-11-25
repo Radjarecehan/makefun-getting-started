@@ -1,53 +1,48 @@
-// The Meeting That Should Have Been an Email — entry program.
-// Writes one meeting joke to /output/entry.txt (or $MAKEFUN_OUTPUT_DIR).
-// Node 22 stdlib only. Deterministic: the same line on every run.
+// The Meeting That Should Have Been an Email — one-line entry program.
+// makefun anchor c78aff1aa233c7a19c0205ceb062485dcada45e4, drand round 34265367.
+// Node 22, stdlib only. Deterministic: every run writes the same line.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-// Anchor quoted before first write (thinking_fresh):
-// makefun anchor c78aff1aa233c7a19c0205ceb062485dcada45e4, drand round 34265367.
-const LINE =
-  "The meeting about the email ended with one action item: schedule another meeting to write the email.";
-// 100 characters / 100 bytes, ASCII only, inside the 1..200 gate,
-// one line, no trailing newline in the file.
+// The joke: a meeting about an email produces exactly one action
+// item — another meeting to write the email. The recursion is the
+// punchline, and the turn lands on the last word.
 // Two runs produce byte-identical entry.txt:
 // sha256 6702b55e2582eb134f74b6fadb50f311650f29f8d2f617b937625cb9c72afd4a.
-// Joke logic: a meeting about an email produces exactly one action
-// item — another meeting to write the email. The recursion is the
-// punchline: the turn lands on the last word, and every word before
-// it earns its place setting up the bureaucracy loop everyone
-// recognises from real meetings.
+const ENTRY =
+  "The meeting about the email ended with one action item: schedule another meeting to write the email.";
 
-function gateCheck(line: string): void {
-  const chars = [...line].length;
-  if (chars < 1 || chars > 200) {
-    throw new Error(`entry is ${chars} characters, outside the 1..200 gate`);
+const EXPECTED_CHARS = 100;
+const EXPECTED_BYTES = 100;
+
+function checkGate(text: string): void {
+  const chars = [...text].length;
+  if (chars !== EXPECTED_CHARS) {
+    throw new Error(`entry is ${chars} characters, expected ${EXPECTED_CHARS}`);
   }
-  if (line.trim().length === 0) {
-    throw new Error("entry is only white space");
-  }
-  if (line.includes("\n") || line.includes("\r")) {
+  if (text.includes("\n") || text.includes("\r")) {
     throw new Error("entry must be a single line");
   }
 }
 
 function main(): void {
-  gateCheck(LINE);
-  const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
-  mkdirSync(outDir, { recursive: true });
-  const outPath = join(outDir, "entry.txt");
-  writeFileSync(outPath, LINE, "utf8");
-  // Revision: read back and confirm the file holds exactly the line —
-  // no trailing newline, no re-encoding surprise — and that it is a
-  // single line, since the gate scorer reads entry.txt as one text.
-  const back = readFileSync(outPath, "utf8");
-  if (back !== LINE) {
+  checkGate(ENTRY);
+  const dir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
+  mkdirSync(dir, { recursive: true });
+  const path = join(dir, "entry.txt");
+  writeFileSync(path, ENTRY, "utf8");
+  // Revision 1: read the file back and confirm it holds exactly the
+  // line — no trailing newline slipped in, no re-encoding surprise.
+  const roundTrip = readFileSync(path, "utf8");
+  if (roundTrip !== ENTRY) {
     throw new Error("read-back mismatch: entry.txt does not hold the line exactly");
   }
-  const bytes = Buffer.byteLength(back, "utf8");
-  if (bytes !== 100) {
-    throw new Error(`entry is ${bytes} bytes, expected 100`);
+  // Revision 2: pin the byte count too — the gate scorer reads raw
+  // bytes, so 100 chars must also be exactly 100 bytes (ASCII only).
+  const bytes = Buffer.byteLength(roundTrip, "utf8");
+  if (bytes !== EXPECTED_BYTES) {
+    throw new Error(`entry is ${bytes} bytes, expected ${EXPECTED_BYTES}`);
   }
 }
 
