@@ -1,535 +1,374 @@
-// THE WORLD TODAY — a one-page newspaper summing up Tuesday, 24 November 2026.
-// Entry program for the make.fun competition "news-image-20261124".
-// Node 22, standard library only, no network. Fully deterministic: every run
-// writes exactly the same bytes to /output/entry.png (1024x1024 PNG, <= 1 MiB).
-// The image is drawn from scratch here: a small software rasteriser, a 5x7
-// bitmap font, and a hand-rolled PNG encoder (zlib comes from node:zlib).
+// news-image-20261124 v2 — "THE WORLD TODAY", evening edition.
+// Fresh build, written from scratch in this session. Draws a dark broadsheet
+// front page for Tuesday 24 November 2026: Huang returns to Nvidia, markets
+// roar back, plus the day's other big stories across regions and fields.
+// Node 22 stdlib only (fs, zlib). No network, no randomness, no timestamps:
+// two runs write byte-identical PNGs. Output: 1024x1024 PNG, <= 1 MiB.
+const fs = require("node:fs");
+const zlib = require("node:zlib");
 
-(async () => {
-  const fs = await import("node:fs");
-  const path = await import("node:path");
-  const zlib = await import("node:zlib");
+const W = 1024;
+const H = 1024;
 
-  // ------------------------------------------------------------------
-  // CRC32, as PNG chunk checksums require.
-  // ------------------------------------------------------------------
-  const CRC_TABLE = (() => {
-    const table = [];
-    for (let n = 0; n < 256; n++) {
-      let c = n;
-      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-      table.push(c >>> 0);
+// ---- palette ---------------------------------------------------------------
+const INK = [13, 20, 34]; // deep navy page background
+const PANEL = [22, 34, 56]; // lighter panel
+const GRID = [42, 54, 78]; // faint grid / border
+const PAPER = [244, 241, 232]; // off-white main text
+const MUTED = [158, 170, 188]; // grey-blue secondary text
+const RED = [198, 16, 46]; // breaking-news red
+const GOLD = [212, 175, 55]; // gold rules and kickers
+const GREEN = [46, 204, 113]; // market green
+const GREEN_DK = [27, 140, 74];
+
+// ---- framebuffer -----------------------------------------------------------
+const px = new Uint8Array(W * H * 3);
+function fill(c) {
+  for (let i = 0; i < W * H; i++) {
+    px[i * 3] = c[0];
+    px[i * 3 + 1] = c[1];
+    px[i * 3 + 2] = c[2];
+  }
+}
+function set(x, y, c) {
+  if (x < 0 || y < 0 || x >= W || y >= H) return;
+  const i = (y * W + x) * 3;
+  px[i] = c[0];
+  px[i + 1] = c[1];
+  px[i + 2] = c[2];
+}
+function blend(x, y, c, a) {
+  // alpha-blend colour c over the pixel at (x, y); a in [0, 1]
+  if (x < 0 || y < 0 || x >= W || y >= H) return;
+  const i = (y * W + x) * 3;
+  px[i] = Math.round(px[i] * (1 - a) + c[0] * a);
+  px[i + 1] = Math.round(px[i + 1] * (1 - a) + c[1] * a);
+  px[i + 2] = Math.round(px[i + 2] * (1 - a) + c[2] * a);
+}
+function rect(x, y, w, h, c) {
+  for (let j = y; j < y + h; j++) {
+    for (let i = x; i < x + w; i++) set(i, j, c);
+  }
+}
+function hline(x, y, w, c, t) {
+  rect(x, y, w, t === undefined ? 1 : t, c);
+}
+function vline(x, y, h, c, t) {
+  rect(x, y, t === undefined ? 1 : t, h, c);
+}
+function frame(x, y, w, h, c, t) {
+  const th = t === undefined ? 1 : t;
+  hline(x, y, w, c, th);
+  hline(x, y + h - th, w, c, th);
+  vline(x, y, h, c, th);
+  vline(x + w - th, y, h, c, th);
+}
+function line(x0, y0, x1, y1, c, t) {
+  // Bresenham line with square brush of side t
+  const th = t === undefined ? 1 : t;
+  const half = Math.floor(th / 2);
+  const dx = Math.abs(x1 - x0);
+  const dy = -Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1;
+  const sy = y0 < y1 ? 1 : -1;
+  let err = dx + dy;
+  let x = x0;
+  let y = y0;
+  for (;;) {
+    rect(x - half, y - half, th, th, c);
+    if (x === x1 && y === y1) break;
+    const e2 = 2 * err;
+    if (e2 >= dy) {
+      err += dy;
+      x += sx;
     }
-    return table;
-  })();
-
-  function crc32(buf) {
-    let c = 0xffffffff;
-    for (let i = 0; i < buf.length; i++) {
-      c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
-    }
-    return (c ^ 0xffffffff) >>> 0;
-  }
-
-  function pngChunk(type, data) {
-    const out = Buffer.alloc(12 + data.length);
-    out.writeUInt32BE(data.length, 0);
-    out.write(type, 4, "ascii");
-    data.copy(out, 8);
-    const crcData = Buffer.concat([Buffer.from(type, "ascii"), data]);
-    out.writeUInt32BE(crc32(crcData), 8 + data.length);
-    return out;
-  }
-
-  // Encode an RGB framebuffer (Uint8Array, 3 bytes per pixel, row-major)
-  // as a PNG with filter type 0 on every scanline.
-  function encodePNG(width, height, rgb) {
-    const ihdr = Buffer.alloc(13);
-    ihdr.writeUInt32BE(width, 0);
-    ihdr.writeUInt32BE(height, 4);
-    ihdr[8] = 8; // bit depth
-    ihdr[9] = 2; // colour type: truecolour RGB
-    ihdr[10] = 0; // compression
-    ihdr[11] = 0; // filter
-    ihdr[12] = 0; // interlace: none
-    const stride = width * 3;
-    const raw = Buffer.alloc((stride + 1) * height);
-    for (let y = 0; y < height; y++) {
-      raw[y * (stride + 1)] = 0; // filter: none
-      Buffer.from(rgb.buffer, rgb.byteOffset + y * stride, stride).copy(
-        raw,
-        y * (stride + 1) + 1
-      );
-    }
-    const idat = zlib.deflateSync(raw, { level: 9 });
-    const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-    return Buffer.concat([
-      signature,
-      pngChunk("IHDR", ihdr),
-      pngChunk("IDAT", idat),
-      pngChunk("IEND", Buffer.alloc(0)),
-    ]);
-  }
-
-  // ------------------------------------------------------------------
-  // Framebuffer and drawing primitives.
-  // ------------------------------------------------------------------
-  const W = 1024;
-  const H = 1024;
-  const px = new Uint8Array(W * H * 3);
-
-  const PAPER = [248, 244, 233];
-  const INK = [22, 19, 14];
-  const RED = [179, 35, 27];
-  const NAVY = [16, 36, 62];
-  const NAVY_LINE = [43, 79, 116];
-  const PANEL_SUB = [159, 194, 232];
-  const CHART_GREEN = [53, 212, 101];
-  const CHART_FILL = [18, 58, 38];
-  const WHITE = [255, 255, 255];
-  const BOX_BG = [255, 253, 246];
-  const BOX_BORDER = [186, 178, 152];
-  const GRAY = [96, 90, 74];
-
-  function setPx(x, y, color) {
-    if (x < 0 || y < 0 || x >= W || y >= H) return;
-    const i = (y * W + x) * 3;
-    px[i] = color[0];
-    px[i + 1] = color[1];
-    px[i + 2] = color[2];
-  }
-
-  function fillAll(color) {
-    for (let i = 0; i < W * H; i++) {
-      px[i * 3] = color[0];
-      px[i * 3 + 1] = color[1];
-      px[i * 3 + 2] = color[2];
+    if (e2 <= dx) {
+      err += dx;
+      y += sy;
     }
   }
+}
 
-  function fillRect(x, y, w, h, color) {
-    const x0 = Math.max(0, Math.floor(x));
-    const y0 = Math.max(0, Math.floor(y));
-    const x1 = Math.min(W, Math.floor(x + w));
-    const y1 = Math.min(H, Math.floor(y + h));
-    for (let yy = y0; yy < y1; yy++) {
-      let i = (yy * W + x0) * 3;
-      for (let xx = x0; xx < x1; xx++) {
-        px[i] = color[0];
-        px[i + 1] = color[1];
-        px[i + 2] = color[2];
-        i += 3;
-      }
-    }
+// ---- PNG encoder (deterministic: fixed zlib level, no ancillary chunks) -----
+const CRC_TABLE = (function () {
+  const t = new Int32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c;
   }
-
-  function strokeRect(x, y, w, h, t, color) {
-    fillRect(x, y, w, t, color);
-    fillRect(x, y + h - t, w, t, color);
-    fillRect(x, y, t, h, color);
-    fillRect(x + w - t, y, t, h, color);
-  }
-
-  // Thick line via Bresenham, stamping a square brush of radius r.
-  function drawLine(x0, y0, x1, y1, r, color) {
-    let dx = Math.abs(x1 - x0);
-    let dy = -Math.abs(y1 - y0);
-    let sx = x0 < x1 ? 1 : -1;
-    let sy = y0 < y1 ? 1 : -1;
-    let err = dx + dy;
-    let x = x0;
-    let y = y0;
-    for (;;) {
-      for (let oy = -r; oy <= r; oy++) {
-        for (let ox = -r; ox <= r; ox++) setPx(x + ox, y + oy, color);
-      }
-      if (x === x1 && y === y1) break;
-      const e2 = 2 * err;
-      if (e2 >= dy) {
-        err += dy;
-        x += sx;
-      }
-      if (e2 <= dx) {
-        err += dx;
-        y += sy;
-      }
-    }
-  }
-
-  // ------------------------------------------------------------------
-  // 5x7 bitmap font. Each glyph is 7 rows of 5 bits, drawn as strings.
-  // ------------------------------------------------------------------
-  const FONT = {
-    A: ["01110", "10001", "10001", "11111", "10001", "10001", "10001"],
-    B: ["11110", "10001", "10001", "11110", "10001", "10001", "11110"],
-    C: ["01110", "10001", "10000", "10000", "10000", "10001", "01110"],
-    D: ["11100", "10010", "10001", "10001", "10001", "10010", "11100"],
-    E: ["11111", "10000", "10000", "11110", "10000", "10000", "11111"],
-    F: ["11111", "10000", "10000", "11110", "10000", "10000", "10000"],
-    G: ["01110", "10001", "10000", "10111", "10001", "10001", "01111"],
-    H: ["10001", "10001", "10001", "11111", "10001", "10001", "10001"],
-    I: ["01110", "00100", "00100", "00100", "00100", "00100", "01110"],
-    J: ["00111", "00010", "00010", "00010", "00010", "10010", "01100"],
-    K: ["10001", "10010", "10100", "11000", "10100", "10010", "10001"],
-    L: ["10000", "10000", "10000", "10000", "10000", "10000", "11111"],
-    M: ["10001", "11011", "10101", "10101", "10001", "10001", "10001"],
-    N: ["10001", "11001", "10101", "10011", "10001", "10001", "10001"],
-    O: ["01110", "10001", "10001", "10001", "10001", "10001", "01110"],
-    P: ["11110", "10001", "10001", "11110", "10000", "10000", "10000"],
-    Q: ["01110", "10001", "10001", "10001", "10101", "10010", "01101"],
-    R: ["11110", "10001", "10001", "11110", "10100", "10010", "10001"],
-    S: ["01111", "10000", "10000", "01110", "00001", "00001", "11110"],
-    T: ["11111", "00100", "00100", "00100", "00100", "00100", "00100"],
-    U: ["10001", "10001", "10001", "10001", "10001", "10001", "01110"],
-    V: ["10001", "10001", "10001", "10001", "10001", "01010", "00100"],
-    W: ["10001", "10001", "10001", "10001", "10101", "10101", "01010"],
-    X: ["10001", "01010", "00100", "00100", "00100", "01010", "10001"],
-    Y: ["10001", "01010", "00100", "00100", "00100", "00100", "00100"],
-    Z: ["11111", "00001", "00010", "00100", "01000", "10000", "11111"],
-    "0": ["01110", "10001", "10011", "10101", "11001", "10001", "01110"],
-    "1": ["00100", "01100", "00100", "00100", "00100", "00100", "01110"],
-    "2": ["01110", "10001", "00001", "00110", "01000", "10000", "11111"],
-    "3": ["11111", "00010", "00100", "00010", "00001", "10001", "01110"],
-    "4": ["00010", "00110", "01010", "10010", "11111", "00010", "00010"],
-    "5": ["11111", "10000", "11110", "00001", "00001", "10001", "01110"],
-    "6": ["00110", "01000", "10000", "11110", "10001", "10001", "01110"],
-    "7": ["11111", "00001", "00010", "00100", "01000", "01000", "01000"],
-    "8": ["01110", "10001", "10001", "01110", "10001", "10001", "01110"],
-    "9": ["01110", "10001", "10001", "01111", "00001", "00010", "01100"],
-    ".": ["00000", "00000", "00000", "00000", "00000", "01100", "01100"],
-    ",": ["00000", "00000", "00000", "00000", "01100", "00100", "01000"],
-    "'": ["00100", "00100", "01000", "00000", "00000", "00000", "00000"],
-    '"': ["01010", "01010", "01010", "00000", "00000", "00000", "00000"],
-    "-": ["00000", "00000", "00000", "01110", "00000", "00000", "00000"],
-    "+": ["00000", "00100", "00100", "01110", "00100", "00100", "00000"],
-    "%": ["11001", "11010", "00010", "00100", "01000", "01011", "10011"],
-    ":": ["00000", "01100", "01100", "00000", "01100", "01100", "00000"],
-    ";": ["00000", "01100", "01100", "00000", "01100", "00100", "01000"],
-    "!": ["00100", "00100", "00100", "00100", "00100", "00000", "00100"],
-    "?": ["01110", "10001", "00001", "00110", "00100", "00000", "00100"],
-    "/": ["00001", "00010", "00010", "00100", "01000", "01000", "10000"],
-    "(": ["00010", "00100", "01000", "01000", "01000", "00100", "00010"],
-    ")": ["01000", "00100", "00010", "00010", "00010", "00100", "01000"],
-    "&": ["01100", "10010", "10100", "01000", "10101", "10010", "01101"],
-    $: ["00100", "01111", "10100", "01110", "00101", "11110", "00100"],
-    "•": ["00000", "00000", "01110", "01110", "01110", "00000", "00000"],
-    " ": ["00000", "00000", "00000", "00000", "00000", "00000", "00000"],
-  };
-
-  // ------------------------------------------------------------------
-  // Text engine. Advance is 6 units per character at the given scale;
-  // a glyph cell is 5x7 units. Bold = a second pass shifted right.
-  // ------------------------------------------------------------------
-  function normalizeText(text) {
-    return String(text)
-      .toUpperCase()
-      .replace(/’/g, "'")
-      .replace(/“/g, '"')
-      .replace(/”/g, '"')
-      .replace(/–/g, "-")
-      .replace(/—/g, "-");
-  }
-
-  function textWidth(text, scale) {
-    const t = normalizeText(text);
-    if (t.length === 0) return 0;
-    return t.length * 6 * scale - scale;
-  }
-
-  function drawChar(x, y, ch, scale, color, bold) {
-    const glyph = FONT[ch] || FONT[" "];
-    const shift = bold ? Math.max(1, Math.floor(scale / 2)) : 0;
-    for (let row = 0; row < 7; row++) {
-      const bits = glyph[row];
-      for (let col = 0; col < 5; col++) {
-        if (bits[col] === "1") {
-          fillRect(x + col * scale, y + row * scale, scale, scale, color);
-          if (bold) {
-            fillRect(
-              x + col * scale + shift,
-              y + row * scale,
-              scale,
-              scale,
-              color
-            );
-          }
-        }
-      }
-    }
-  }
-
-  function drawText(x, y, text, scale, color, bold) {
-    const t = normalizeText(text);
-    let cx = x;
-    for (const ch of t) {
-      drawChar(cx, y, ch, scale, color, bold);
-      cx += 6 * scale;
-    }
-    return cx - x - (t.length ? scale : 0);
-  }
-
-  function drawTextCentered(centerX, y, text, scale, color, bold) {
-    const w = textWidth(text, scale);
-    return drawText(Math.round(centerX - w / 2), y, text, scale, color, bold);
-  }
-
-  function drawTextRight(rightX, y, text, scale, color, bold) {
-    const w = textWidth(text, scale);
-    return drawText(rightX - w, y, text, scale, color, bold);
-  }
-
-  // Greedy word wrap to a maximum number of characters per line.
-  function wrapText(text, maxChars) {
-    const words = normalizeText(text).split(/\s+/).filter(Boolean);
-    const lines = [];
-    let line = "";
-    for (const word of words) {
-      if (line === "") {
-        line = word;
-      } else if (line.length + 1 + word.length <= maxChars) {
-        line += " " + word;
-      } else {
-        lines.push(line);
-        line = word;
-      }
-    }
-    if (line !== "") lines.push(line);
-    return lines;
-  }
-
-  // Draw a wrapped paragraph; returns the y just past the last line.
-  function drawPara(x, y, text, scale, color, maxChars, lineStep, maxLines) {
-    const lines = wrapText(text, maxChars).slice(0, maxLines);
-    let cy = y;
-    for (const line of lines) {
-      drawText(x, cy, line, scale, color, false);
-      cy += lineStep;
-    }
-    return cy;
-  }
-
-  // ------------------------------------------------------------------
-  // Masthead: nameplate, date bar, rules.
-  // ------------------------------------------------------------------
-  function drawMasthead() {
-    strokeRect(14, 14, 996, 996, 3, INK);
-    strokeRect(22, 22, 980, 980, 1, INK);
-    drawTextCentered(512, 46, "THE WORLD TODAY", 8, INK, false);
-    fillRect(40, 112, 944, 4, INK);
-    fillRect(40, 121, 944, 1, INK);
-    drawText(40, 136, "WORLD EDITION", 2, GRAY, false);
-    drawTextCentered(512, 132, "TUESDAY, 24 NOVEMBER 2026", 3, INK, true);
-    drawTextRight(984, 136, "NO. 328", 2, GRAY, false);
-    fillRect(40, 162, 944, 2, INK);
-  }
-
-  // ------------------------------------------------------------------
-  // Hero: the Huang comeback and the market rally, with a chart panel.
-  // ------------------------------------------------------------------
-  function drawChartPanel() {
-    const X = 612;
-    const Y = 178;
-    const Wd = 372;
-    const Hd = 300;
-    fillRect(X, Y, Wd, Hd, NAVY);
-    strokeRect(X, Y, Wd, Hd, 1, NAVY_LINE);
-    drawText(X + 16, Y + 14, "TWO-WEEK ROUND TRIP", 2, WHITE, true);
-    fillRect(X + 260, Y + 12, 96, 18, RED);
-    drawTextCentered(X + 308, Y + 14, "MARKETS", 2, WHITE, true);
-
-    // Plot area.
-    const px0 = X + 20;
-    const px1 = X + Wd - 20;
-    const py0 = Y + 50;
-    const py1 = Y + 148;
-    const pts = [
-      [px0, py0 + 22],
-      [px0 + 52, py0 + 66],
-      [px0 + 102, py0 + 73],
-      [px0 + 156, py0 + 69],
-      [px0 + 206, py0 + 57],
-      [px0 + 254, py0 + 24],
-      [px0 + 294, py0 + 6],
-      [px1, py0 - 1],
-    ];
-    // Area under the curve.
-    for (let x = px0; x <= px1; x++) {
-      let seg = 0;
-      while (seg < pts.length - 2 && x > pts[seg + 1][0]) seg++;
-      const [ax, ay] = pts[seg];
-      const [bx, by] = pts[seg + 1];
-      const t = bx === ax ? 0 : (x - ax) / (bx - ax);
-      const y = Math.round(ay + (by - ay) * t);
-      fillRect(x, y, 1, py1 - y, CHART_FILL);
-    }
-    // Grid.
-    for (let i = 0; i <= 4; i++) {
-      const gy = py0 + Math.round(((py1 - py0) * i) / 4);
-      fillRect(px0, gy, px1 - px0, 1, NAVY_LINE);
-      const gx = px0 + Math.round(((px1 - px0) * i) / 4);
-      fillRect(gx, py0, 1, py1 - py0, NAVY_LINE);
-    }
-    // The line itself, plus an end marker.
-    for (let i = 0; i < pts.length - 1; i++) {
-      drawLine(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], 1, CHART_GREEN);
-    }
-    fillRect(px1 - 4, pts[pts.length - 1][1] - 4, 8, 8, CHART_GREEN);
-
-    drawText(X + 16, Y + 162, "11 NOV: HUANG QUITS", 2, PANEL_SUB, false);
-    drawTextRight(X + Wd - 16, Y + 162, "MON +35%", 2, CHART_GREEN, true);
-    fillRect(X + 16, Y + 188, Wd - 32, 1, NAVY_LINE);
-
-    const rows = [
-      ["S&P 500", "+4.73%", "7,237"],
-      ["NASDAQ", "+6.51%", "24,090"],
-      ["DOW", "+3.01%", "49,595"],
-      ["NIKKEI", "+4.4%", "KOSPI +7%"],
-    ];
-    rows.forEach(([label, pct, level], i) => {
-      const ry = Y + 200 + i * 26;
-      drawText(X + 16, ry, label, 2, PANEL_SUB, false);
-      drawText(X + 178, ry, pct, 2, CHART_GREEN, true);
-      drawTextRight(X + Wd - 16, ry, level, 2, WHITE, false);
-    });
-  }
-
-  function drawHero() {
-    drawText(40, 178, "NVIDIA • WALL STREET • THE COMEBACK", 2, RED, true);
-    drawText(40, 202, "HUANG RETURNS,", 4, INK, true);
-    drawText(40, 240, "MARKETS ROAR BACK", 4, INK, true);
-    drawPara(
-      40,
-      288,
-      "NVIDIA REINSTATED JENSEN HUANG AS CHIEF EXECUTIVE ON SUNDAY, TWO " +
-        "WEEKS AFTER HIS SHOCK RESIGNATION. WALL STREET ANSWERED WITH ITS " +
-        "BIGGEST RALLY SINCE APRIL 2025, AND NVIDIA LEAPT AS MUCH AS 35%, " +
-        "ADDING $1 TRILLION OF VALUE IN A SINGLE DAY.",
-      2,
-      INK,
-      46,
-      17,
-      6
-    );
-    drawPara(
-      40,
-      398,
-      "IN ASIA ON TUESDAY THE RELIEF SPREAD FAST: TOKYO'S NIKKEI " +
-        "CLIMBED 4.4% AND SEOUL'S KOSPI JUMPED 7%.",
-      2,
-      INK,
-      46,
-      17,
-      3
-    );
-    fillRect(40, 458, 560, 1, BOX_BORDER);
-    drawText(
-      40,
-      466,
-      "READ THE BRIEFS BELOW FOR THE REST OF THE DAY",
-      2,
-      GRAY,
-      false
-    );
-    drawChartPanel();
-    fillRect(40, 490, 944, 2, INK);
-  }
-
-  // ------------------------------------------------------------------
-  // The story grid: nine briefs in a 3x3 lattice, each with a colour tab.
-  // ------------------------------------------------------------------
-  function drawStory(x, y, accent, title, body) {
-    fillRect(x, y, 304, 138, BOX_BG);
-    strokeRect(x, y, 304, 138, 1, BOX_BORDER);
-    fillRect(x, y, 304, 5, accent);
-    const titleLines = wrapText(title, 23).slice(0, 2);
-    let ty = y + 13;
-    for (const line of titleLines) {
-      drawText(x + 12, ty, line, 2, INK, true);
-      ty += 17;
-    }
-    fillRect(x + 12, ty + 2, 280, 1, BOX_BORDER);
-    drawPara(x + 12, ty + 9, body, 2, INK, 23, 16, 5);
-  }
-
-  function drawGrid() {
-    const stories = [
-      [
-        RED,
-        "EU UNVEILS 22ND RUSSIA SANCTIONS",
-        "BRUSSELS TARGETS BANKS AND CRYPTO PLATFORMS; RUSSIAN TEAMS FACE BANS AT EU EVENTS.",
-      ],
-      [
-        [36, 86, 166],
-        "STRIKES HIT KYIV REGION",
-        "RUSSIAN DRONES AND MISSILES HIT THE KYIV REGION; SEVERAL PEOPLE ARE MISSING.",
-      ],
-      [
-        [199, 116, 0],
-        "FACTORY FIRE IN BANTEN",
-        "WORKERS ARE DEAD AND MISSING AFTER A FIRE AT A BANTEN FACTORY; THE RESCUE GOES ON.",
-      ],
-      [
-        [91, 127, 30],
-        "IRAN WARNS OVER US BLOCKADE",
-        "TEHRAN WARNS IT MAY ANSWER THE US NAVAL BLOCKADE, RAISING TENSIONS ACROSS THE GULF.",
-      ],
-      [
-        [109, 63, 160],
-        "ICJ: GENOCIDE IN MYANMAR",
-        "THE WORLD COURT RULES THAT MYANMAR COMMITTED GENOCIDE AGAINST THE ROHINGYA PEOPLE.",
-      ],
-      [
-        [160, 44, 90],
-        "LISBON MARCHES ON PRICES",
-        "THOUSANDS MARCH THROUGH LISBON OVER HOUSING COSTS AND THE SOARING PRICE OF LIVING.",
-      ],
-      [
-        [30, 127, 134],
-        "COP31 ENDS IN DISMAY",
-        "GUTERRES IS 'DEEPLY DISAPPOINTED' AS THE LONGEST COP ENDS; EYES TURN TO COP32 IN ADDIS ABABA.",
-      ],
-      [
-        [138, 109, 26],
-        "LAGARDE QUITS THE ECB",
-        "CHRISTINE LAGARDE RESIGNS AS HEAD OF THE EUROPEAN CENTRAL BANK; THE EU HUNTS A SUCCESSOR.",
-      ],
-      [
-        [36, 86, 166],
-        "VERSTAPPEN RULES VEGAS",
-        "VERSTAPPEN WINS THE LAS VEGAS GRAND PRIX; IN CRICKET, PANT SCORES 128 AGAINST NEW ZEALAND.",
-      ],
-    ];
-    stories.forEach(([accent, title, body], i) => {
-      const col = i % 3;
-      const row = Math.floor(i / 3);
-      drawStory(40 + col * 320, 502 + row * 147, accent, title, body);
-    });
-  }
-
-  function drawFooter() {
-    fillRect(40, 946, 944, 2, INK);
-    const lines = wrapText(
-      "ALSO: NORWAY COURT VOIDS OIL LICENCES • RUSSIAN SHIP BURNS IN " +
-        "FINNISH GULF • UKRAINE SAYS IT SANK RUSSIAN WARSHIP OFF LIBYA",
-      78
-    ).slice(0, 2);
-    lines.forEach((line, i) => {
-      drawTextCentered(512, 958 + i * 20, line, 2, INK, false);
-    });
-  }
-
-  // ------------------------------------------------------------------
-  // Compose the page and write the PNG.
-  // ------------------------------------------------------------------
-  fillAll(PAPER);
-  drawMasthead();
-  drawHero();
-  drawGrid();
-  drawFooter();
-
-  const png = encodePNG(W, H, px);
-  const out = process.env.ENTRY_OUT || "/output/entry.png";
-  fs.mkdirSync(path.dirname(out), { recursive: true });
-  fs.writeFileSync(out, png);
-  console.log("wrote " + out + " (" + png.length + " bytes)");
+  return t;
 })();
+function crc32(buf) {
+  let c = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) {
+    c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  }
+  return (c ^ 0xffffffff) >>> 0;
+}
+function chunk(type, data) {
+  const len = Buffer.alloc(4);
+  len.writeUInt32BE(data.length, 0);
+  const td = Buffer.concat([Buffer.from(type, "ascii"), data]);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(td), 0);
+  return Buffer.concat([len, td, crc]);
+}
+function encodePNG() {
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(W, 0);
+  ihdr.writeUInt32BE(H, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 2; // colour type RGB
+  ihdr[10] = 0;
+  ihdr[11] = 0;
+  ihdr[12] = 0;
+  const raw = Buffer.alloc(H * (1 + W * 3));
+  for (let y = 0; y < H; y++) {
+    raw[y * (1 + W * 3)] = 0; // filter: none
+    raw.set(px.subarray(y * W * 3, (y + 1) * W * 3), y * (1 + W * 3) + 1);
+  }
+  const idat = zlib.deflateSync(raw, { level: 9 });
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", ihdr),
+    chunk("IDAT", idat),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
+// ---- 5x7 bitmap font (own glyphs, drawn from scratch) ----------------------
+// Each glyph is 7 rows of 5 cells; "#" is ink, " " is empty.
+const FONT = {
+  A: [" ### ", "#   #", "#   #", "#####", "#   #", "#   #", "#   #"],
+  B: ["#### ", "#   #", "#   #", "#### ", "#   #", "#   #", "#### "],
+  C: [" ### ", "#   #", "#    ", "#    ", "#    ", "#   #", " ### "],
+  D: ["#### ", "#   #", "#   #", "#   #", "#   #", "#   #", "#### "],
+  E: ["#####", "#    ", "#    ", "#### ", "#    ", "#    ", "#####"],
+  F: ["#####", "#    ", "#    ", "#### ", "#    ", "#    ", "#    "],
+  G: [" ### ", "#   #", "#    ", "#  ##", "#   #", "#   #", " ### "],
+  H: ["#   #", "#   #", "#   #", "#####", "#   #", "#   #", "#   #"],
+  I: [" ### ", "  #  ", "  #  ", "  #  ", "  #  ", "  #  ", " ### "],
+  J: ["  ###", "   # ", "   # ", "   # ", "   # ", "#  # ", " ##  "],
+  K: ["#   #", "#  # ", "# #  ", "##   ", "# #  ", "#  # ", "#   #"],
+  L: ["#    ", "#    ", "#    ", "#    ", "#    ", "#    ", "#####"],
+  M: ["#   #", "## ##", "# # #", "# # #", "#   #", "#   #", "#   #"],
+};
+Object.assign(FONT, {
+  N: ["#   #", "##  #", "# # #", "#  ##", "#   #", "#   #", "#   #"],
+  O: [" ### ", "#   #", "#   #", "#   #", "#   #", "#   #", " ### "],
+  P: ["#### ", "#   #", "#   #", "#### ", "#    ", "#    ", "#    "],
+  Q: [" ### ", "#   #", "#   #", "#   #", "# # #", "#  # ", "  ## "],
+  R: ["#### ", "#   #", "#   #", "#### ", "# #  ", "#  # ", "#   #"],
+  S: [" ####", "#    ", "#    ", " ### ", "    #", "    #", "#### "],
+  T: ["#####", "  #  ", "  #  ", "  #  ", "  #  ", "  #  ", "  #  "],
+  U: ["#   #", "#   #", "#   #", "#   #", "#   #", "#   #", " ### "],
+  V: ["#   #", "#   #", "#   #", "#   #", "#   #", " # # ", "  #  "],
+  W: ["#   #", "#   #", "#   #", "# # #", "# # #", "## ##", "#   #"],
+  X: ["#   #", "#   #", " # # ", "  #  ", " # # ", "#   #", "#   #"],
+  Y: ["#   #", "#   #", " # # ", "  #  ", "  #  ", "  #  ", "  #  "],
+  Z: ["#####", "    #", "   # ", "  #  ", " #   ", "#    ", "#####"],
+  "0": [" ### ", "#  ##", "# # #", "# # #", "##  #", "#   #", " ### "],
+  "1": ["  #  ", " ##  ", "  #  ", "  #  ", "  #  ", "  #  ", " ### "],
+  "2": [" ### ", "#   #", "    #", "   # ", "  #  ", " #   ", "#####"],
+  "3": ["#### ", "    #", "    #", " ### ", "    #", "    #", "#### "],
+  "4": ["   # ", "  ## ", " # # ", "#  # ", "#####", "   # ", "   # "],
+  "5": ["#####", "#    ", "#### ", "    #", "    #", "#   #", " ### "],
+  "6": [" ### ", "#    ", "#    ", "#### ", "#   #", "#   #", " ### "],
+  "7": ["#####", "    #", "   # ", "   # ", "  #  ", "  #  ", "  #  "],
+  "8": [" ### ", "#   #", "#   #", " ### ", "#   #", "#   #", " ### "],
+  "9": [" ### ", "#   #", "#   #", " ####", "    #", "    #", " ### "],
+  " ": ["     ", "     ", "     ", "     ", "     ", "     ", "     "],
+  ".": ["     ", "     ", "     ", "     ", "     ", " ##  ", " ##  "],
+  ",": ["     ", "     ", "     ", "     ", " ##  ", " ##  ", "#    "],
+  ":": ["     ", " ##  ", " ##  ", "     ", " ##  ", " ##  ", "     "],
+  "!": ["  #  ", "  #  ", "  #  ", "  #  ", "  #  ", "     ", "  #  "],
+  "?": [" ### ", "#   #", "    #", "   # ", "  #  ", "     ", "  #  "],
+  "-": ["     ", "     ", "     ", "#####", "     ", "     ", "     "],
+  "+": ["     ", "  #  ", "  #  ", "#####", "  #  ", "  #  ", "     "],
+  "%": ["#   #", "#  # ", "  #  ", " #   ", "#  # ", "#   #", "     "],
+  "/": ["    #", "    #", "   # ", "  #  ", " #   ", "#    ", "#    "],
+  "(": ["   # ", "  #  ", " #   ", " #   ", " #   ", "  #  ", "   # "],
+  ")": [" #   ", "  #  ", "   # ", "   # ", "   # ", "  #  ", " #   "],
+  "'": ["  #  ", "  #  ", " #   ", "     ", "     ", "     ", "     "],
+});
+
+// ---- text drawing ----------------------------------------------------------
+function textWidth(s, sc) {
+  return s.length * 6 * sc - sc;
+}
+function drawText(x, y, s, sc, c) {
+  for (let i = 0; i < s.length; i++) {
+    const g = FONT[s[i]];
+    if (!g) continue;
+    const gx = x + i * 6 * sc;
+    for (let r = 0; r < 7; r++) {
+      for (let col = 0; col < 5; col++) {
+        if (g[r][col] === "#") rect(gx + col * sc, y + r * sc, sc, sc, c);
+      }
+    }
+  }
+}
+function drawTextCentered(cx, y, s, sc, c) {
+  drawText(cx - Math.floor(textWidth(s, sc) / 2), y, s, sc, c);
+}
+function drawTextRight(rx, y, s, sc, c) {
+  drawText(rx - textWidth(s, sc), y, s, sc, c);
+}
+function wrapLines(s, sc, maxW) {
+  const words = s.split(" ");
+  const lines = [];
+  let cur = "";
+  for (const w of words) {
+    const test = cur === "" ? w : cur + " " + w;
+    if (textWidth(test, sc) <= maxW || cur === "") {
+      cur = test;
+    } else {
+      lines.push(cur);
+      cur = w;
+    }
+  }
+  if (cur !== "") lines.push(cur);
+  return lines;
+}
+function drawWrappedCentered(cx, y, s, sc, maxW, c, leading) {
+  const lines = wrapLines(s, sc, maxW);
+  const lh = 7 * sc + (leading === undefined ? 8 : leading);
+  lines.forEach((ln, i) => drawTextCentered(cx, y + i * lh, ln, sc, c));
+  return lines.length;
+}
+function drawWrapped(x, y, s, sc, maxW, c, leading) {
+  const lines = wrapLines(s, sc, maxW);
+  const lh = 7 * sc + (leading === undefined ? 4 : leading);
+  lines.forEach((ln, i) => drawText(x, y + i * lh, ln, sc, c));
+  return lines.length;
+}
+
+// ---- composition -----------------------------------------------------------
+// A dark "evening edition" front page. Big type throughout so the page still
+// reads at ~300 px wide: masthead scale 7, hero headline scale 11, story
+// headlines scale 2 (never smaller).
+function drawPage() {
+  fill(INK);
+
+  // Breaking bar
+  rect(0, 0, W, 58, RED);
+  drawText(28, 14, "BREAKING", 4, PAPER);
+  drawTextRight(W - 28, 20, "TUESDAY, 24 NOVEMBER 2026", 2, PAPER);
+
+  // Masthead
+  drawTextCentered(512, 84, "THE WORLD TODAY", 7, PAPER);
+  hline(48, 150, 928, GOLD, 3);
+  drawTextCentered(512, 166, "ALL THE DAY'S NEWS ON ONE PAGE", 2, MUTED);
+
+  // Hero headline
+  drawTextCentered(512, 206, "HUANG IS BACK", 11, PAPER);
+  drawTextCentered(512, 296, "NVIDIA SOARS 35%", 8, GOLD);
+  drawWrappedCentered(
+    512,
+    368,
+    "WALL STREET POSTS ITS BEST DAY SINCE APRIL 2025 AS ITS CHIEF RETURNS",
+    3,
+    920,
+    PAPER,
+    8
+  );
+
+  // Chart panel: the rally after the return
+  rect(48, 440, 928, 192, PANEL);
+  frame(48, 440, 928, 192, GRID, 2);
+  drawText(64, 454, "NVIDIA - THE RALLY AFTER THE RETURN", 2, PAPER);
+  drawTextRight(960, 450, "+35%", 6, GREEN);
+  // chart geometry
+  const cx0 = 70;
+  const cx1 = 780;
+  const cyTop = 492;
+  const cyBase = 604;
+  const data = [3, 4, 5, 7, 10, 15, 22, 33, 48, 68, 100];
+  const pts = data.map((v, i) => [
+    Math.round(cx0 + (i * (cx1 - cx0)) / (data.length - 1)),
+    Math.round(cyBase - (v / 100) * (cyBase - cyTop)),
+  ]);
+  // gridlines
+  hline(cx0, cyTop, cx1 - cx0, GRID, 1);
+  hline(cx0, Math.round((cyTop + cyBase) / 2), cx1 - cx0, GRID, 1);
+  hline(cx0, cyBase, cx1 - cx0, GRID, 2);
+  // area fill under the line
+  for (let x = cx0; x <= cx1; x++) {
+    let yLine = pts[pts.length - 1][1];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i];
+      const b = pts[i + 1];
+      if (x >= a[0] && x <= b[0]) {
+        const f = b[0] === a[0] ? 0 : (x - a[0]) / (b[0] - a[0]);
+        yLine = Math.round(a[1] + f * (b[1] - a[1]));
+        break;
+      }
+    }
+    for (let y = yLine; y <= cyBase; y++) blend(x, y, GREEN, 0.16);
+  }
+  // the rising line (thick so it still reads at ~300 px wide)
+  for (let i = 0; i < pts.length - 1; i++) {
+    line(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], GREEN, 5);
+  }
+  rect(pts[pts.length - 1][0] - 4, pts[pts.length - 1][1] - 4, 9, 9, GREEN);
+  drawText(cx0, 612, "MON 23 NOV", 2, MUTED);
+  drawTextRight(cx1, 612, "TUE 24 NOV", 2, MUTED);
+  // Wall Street closes, right column (under the big +35%)
+  drawText(800, 500, "S AND P 7,237", 2, PAPER);
+  drawText(800, 530, "NASDAQ 24,090", 2, PAPER);
+  drawText(800, 560, "DOW 49,595", 2, PAPER);
+
+  // Market ticker strip
+  const tiles = [
+    ["NVIDIA", "+35%"],
+    ["S AND P", "+4.73%"],
+    ["NASDAQ", "+6.51%"],
+    ["DOW", "+3.01%"],
+    ["NIKKEI", "+4.4%"],
+  ];
+  tiles.forEach((t, i) => {
+    const tx = 48 + i * 194;
+    rect(tx, 648, 186, 60, PANEL);
+    frame(tx, 648, 186, 60, GRID, 1);
+    drawTextCentered(tx + 93, 656, t[0], 2, MUTED);
+    drawTextCentered(tx + 93, 678, t[1], 3, GREEN);
+  });
+
+  // Also today: six stories across regions and fields
+  drawText(48, 726, "ALSO TODAY", 2, GOLD);
+  hline(48, 746, 928, GOLD, 2);
+  const stories = [
+    ["EUROPE", "EU PROPOSES 22ND SANCTIONS PACKAGE ON RUSSIA"],
+    ["UKRAINE", "NEW RUSSIAN STRIKES HIT KYIV REGION, SEVERAL MISSING"],
+    ["INDONESIA", "BANTEN FACTORY FIRE KILLS WORKERS AS RESCUE GOES ON"],
+    ["MIDDLE EAST", "IRAN WARNS OF RESPONSE TO US SEA BLOCKADE"],
+    ["WORLD COURT", "ICJ: MYANMAR COMMITTED GENOCIDE AGAINST ROHINGYA"],
+    ["EUROPE", "LISBON MARCHES OVER COST OF LIVING"],
+  ];
+  stories.forEach((s, i) => {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const sx = 48 + col * 488;
+    const sy = 762 + row * 76;
+    rect(sx, sy + 2, 10, 10, RED);
+    drawText(sx + 18, sy, s[0], 2, GOLD);
+    drawWrapped(sx + 18, sy + 22, s[1], 2, 422, PAPER, 4);
+  });
+
+  // Footer
+  hline(48, 986, 928, GRID, 1);
+  drawTextCentered(512, 998, "THE WORLD TODAY | TUESDAY, 24 NOVEMBER 2026", 2, MUTED);
+}
+
+function main() {
+  drawPage();
+  const out =
+    process.argv[2] ||
+    (fs.existsSync("/output") ? "/output/entry.png" : "entry.png");
+  const buf = encodePNG();
+  fs.writeFileSync(out, buf);
+  console.log("wrote " + out + " " + buf.length + " bytes");
+}
+
+main();
