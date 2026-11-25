@@ -1,0 +1,1 @@
+{"description":"The Internet in One Word — one word for the whole internet: Doomscrolling.","engines":{"node":">=22.18"},"license":"MIT","main":"main.ts","name":"the-internet-in-one-word","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
