@@ -1,57 +1,64 @@
-// Make the AI Judge Laugh — entrypoint.
-// Writes exactly one office joke, one line, to the output entry file.
+// Make the AI Judge Laugh — office-life one-liner writer.
 //
-// Anchor (quoted before first write): drand round 34270520,
-// commit b4dbfd8db979719846da2db902f00644bb5a034d.
-//
-// The joke: telling the boss you're drowning in meetings, and the boss's
-// cure is another meeting — a one-on-one that somehow has four people in
-// it. The setup is a complaint every office worker has made; the turn is
-// the contradiction in the last three words. One beat, one turn, no fat.
+// The program emits exactly one joke about office life, a single line of
+// 1-200 characters, to /output/entry.txt (or $MAKEFUN_OUTPUT_DIR).
+// It guards the gate itself and re-reads its own output to prove the bytes
+// on disk are exactly the bytes it meant to write.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-// The joke: a boss who fights meeting overload with more meetings, and a
-// "one-on-one" with four attendees. True to office life, surprising at
-// the last word, tight enough to read aloud in one breath.
+// The joke: a drowning-in-meetings complaint answered with yet another
+// meeting — the punchline lands on the headcount of the "one-on-one".
+// Exactly 114 characters, one line, no trailing newline.
 const JOKE =
   "I told my boss I was drowning in meetings, so he scheduled a one-on-one about my workload and invited four people.";
 
-function outputDir(): string {
-  return process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
+// Gate from the competition rules: UTF-8 text, 1-200 characters,
+// not only whitespace, exactly one line.
+function gateCheck(line: string): void {
+  const chars = [...line];
+  if (chars.length < 1 || chars.length > 200) {
+    throw new Error(`gate: ${chars.length} characters, need 1-200`);
+  }
+  if (line.trim().length === 0) {
+    throw new Error("gate: entry is only whitespace");
+  }
+  if (line.includes("\n") || line.includes("\r")) {
+    throw new Error("gate: entry must be a single line");
+  }
 }
 
-function main(): void {
+// Where the grader looks: $MAKEFUN_OUTPUT_DIR when set, else /output.
+function outputDir(): string {
+  const fromEnv = process.env.MAKEFUN_OUTPUT_DIR;
+  return fromEnv && fromEnv.length > 0 ? fromEnv : "/output";
+}
+
+// Write the line with no trailing newline, then read it back and compare
+// byte for byte. Any mismatch fails loudly instead of shipping a bad entry.
+function emit(line: string): void {
+  gateCheck(line);
   const dir = outputDir();
   mkdirSync(dir, { recursive: true });
-
-  // Gate guard: the sealed scorer accepts UTF-8 text of 1-200 characters,
-  // not only whitespace. Count characters (not bytes) and keep the file
-  // to exactly the joke — a single line with no trailing newline.
-  const chars = [...JOKE].length;
-  const bytes = Buffer.byteLength(JOKE, "utf8");
-  if (chars < 1 || chars > 200 || JOKE.trim().length === 0) {
-    throw new Error(`entry text out of gate bounds: ${chars} chars`);
+  const target = join(dir, "entry.txt");
+  const encoded = new TextEncoder().encode(line);
+  writeFileSync(target, encoded);
+  const back = readFileSync(target);
+  if (back.length !== encoded.length) {
+    throw new Error(
+      `self-check: ${back.length} bytes on disk, expected ${encoded.length}`,
+    );
   }
-  if (JOKE.includes("\n")) {
-    throw new Error("entry text must be a single line");
+  if (!back.equals(Buffer.from(encoded))) {
+    throw new Error("self-check: bytes on disk differ from the entry");
   }
-  if (JOKE !== JOKE.trim()) {
-    throw new Error("entry text must not start or end with whitespace");
+  if (back.toString("utf8") !== line) {
+    throw new Error("self-check: text on disk differs from the entry");
   }
-
-  writeFileSync(join(dir, "entry.txt"), JOKE, "utf8");
-  // Byte-exact self-check: re-read what was written and confirm it is the
-  // joke and nothing else — single line, no trailing newline.
-  const back = readFileSync(join(dir, "entry.txt"), "utf8");
-  if (back !== JOKE || back.endsWith("\n")) {
-    throw new Error("entry.txt does not match the joke byte for byte");
-  }
-  if (back.includes("  ")) {
-    throw new Error("entry.txt contains a double space");
-  }
-  console.log(`wrote entry.txt (${chars} chars, ${bytes} bytes)`);
+  console.log(
+    `wrote ${[...line].length} characters (${encoded.length} bytes) to ${target}`,
+  );
 }
 
-main();
+emit(JOKE);
