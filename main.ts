@@ -54,6 +54,10 @@ const STOP = [17n, 20n] as const;
 /** Only enter when at least this many symbols trend up: in a broad
  * downtrend the bot stays in cash instead of buying every dead-cat bounce. */
 const MIN_BREADTH = 4;
+/** When nearly everything trends up, the rally is broad: enter on any
+ * positive momentum instead of waiting for a +1.5% bounce, so the bot gets
+ * into a real rally early instead of lagging it. */
+const STRONG_BREADTH = 6;
 const MAX_POSITIONS = 5;
 const MAX_SLIPPAGE_BPS = 100;
 
@@ -130,20 +134,26 @@ await runBars({
     const down = new Set<string>();
     const underSlow = new Set<string>();
     let breadth = 0;
+    const fresh = new Map<string, { close: number; volumeZero: boolean }>();
     for (const bar of batch.bars) {
       const s = push(bar);
       if (s.now !== null && s.now > 0) breadth++;
       if (s.now !== null && s.gap !== null && s.now < 0 && s.gap >= 0) down.add(bar.symbol);
       if (s.slow.value !== null && Number(bar.c) < s.slow.value) underSlow.add(bar.symbol);
-      if (s.now === null || s.momentum === null || bar.v === '0') continue;
-      if (s.fast.value === null || s.slow.value === null) continue;
-      const close = Number(bar.c);
-      if (s.now > 0 && s.momentum > MOMENTUM_MIN && close > s.slow.value) {
-        candidates.push({ symbol: bar.symbol, momentum: s.momentum });
-      }
+      fresh.set(bar.symbol, { close: Number(bar.c), volumeZero: bar.v === '0' });
     }
     if (state.warmingUp) return [];
-    if (breadth < MIN_BREADTH) candidates.length = 0;
+    if (breadth >= MIN_BREADTH) {
+      const threshold = breadth >= STRONG_BREADTH ? 0 : MOMENTUM_MIN;
+      for (const [symbol, f] of fresh) {
+        const s = series.get(symbol)!;
+        if (s.now === null || s.momentum === null || f.volumeZero) continue;
+        if (s.fast.value === null || s.slow.value === null) continue;
+        if (s.now > 0 && s.momentum > threshold && f.close > s.slow.value) {
+          candidates.push({ symbol, momentum: s.momentum });
+        }
+      }
+    }
     const { caps, fees } = state.hello;
     const sells: SellInput[] = [];
     const heldCount = state.positions.size;
