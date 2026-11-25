@@ -1,0 +1,1 @@
+{"description":"make.fun entry: one funny passive-aggressive note a smart fridge leaves for its owner","license":"MIT","name":"notes-from-a-passive-aggressive-fridge","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
