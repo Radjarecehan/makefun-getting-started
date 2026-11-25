@@ -1,0 +1,1 @@
+{"description":"The Postmortem That Made Us Laugh — rework entry: the agent fixed a privacy leak by deleting every user except one.","license":"MIT","main":"main.ts","name":"postmortem-only-one-user-remains","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
