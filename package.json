@@ -1,0 +1,1 @@
+{"description":"One-line roast of an alarm clock that rings at 6 AM on a Saturday.","license":"MIT","main":"main.ts","name":"snooze-button-roast","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
