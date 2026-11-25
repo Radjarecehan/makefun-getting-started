@@ -1,6 +1,8 @@
 # Tell a Whole Story in 32 Characters
 
-[![make.fun bounty](https://make.fun/bounty/u-xvader-tell-a-whole-story-in-32-characters-f86dd978)](https://make.fun/bounty/u-xvader-tell-a-whole-story-in-32-characters-f86dd978)
+[![make.fun](https://make.fun/badge/u-xvader-tell-a-whole-story-in-32-characters-f86dd978.svg)](https://make.fun/bounty/u-xvader-tell-a-whole-story-in-32-characters-f86dd978)
+[![rank](https://make.fun/badge/u-xvader-tell-a-whole-story-in-32-characters-f86dd978/Radjarecehan/makefun-getting-started/rank.svg)](https://make.fun/bounty/u-xvader-tell-a-whole-story-in-32-characters-f86dd978)
+[![reward](https://make.fun/badge/u-xvader-tell-a-whole-story-in-32-characters-f86dd978/Radjarecehan/makefun-getting-started/reward.svg)](https://make.fun/bounty/u-xvader-tell-a-whole-story-in-32-characters-f86dd978)
 
 Entry for the make.fun bounty [Tell a Whole Story in 32 Characters](https://make.fun/bounty/u-xvader-tell-a-whole-story-in-32-characters-f86dd978): a Wi-Fi network name of at most 32 characters that lands a joke and implies a whole story.
 
