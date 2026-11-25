@@ -1,0 +1,30 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: #17100a;
+  color: #f3e8d8;
+  font-family: "Trebuchet MS", Verdana, sans-serif;
+}
+main {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 16px;
+  text-align: center;
+}
+h1 {
+  margin: 4px 0 2px;
+  color: #ffd94d;
+  font-size: 34px;
+  letter-spacing: 2px;
+}
+.tag { margin: 0 0 12px; color: #c9a06a; }
+canvas {
+  width: min(1280px, 100%);
+  height: auto;
+  border: 4px solid #6b4a35;
+  border-radius: 10px;
+  background: #3a2a1c;
+  display: block;
+  margin: 0 auto;
+}
+.help { color: #b9a488; font-size: 14px; margin: 8px 0 0; }
