@@ -19,16 +19,14 @@
 //     symbol it does not hold — and only while at least 4 of the 7 symbols
 //     trend up, so in a broad downtrend the bot stays in cash instead of
 //     buying every dead-cat bounce. A bar whose volume is 0 signals no entry.
-//   - Exit, the whole position: EMA(8) crosses under EMA(21), the 6-bar
-//     momentum turns below -1%, or the position worth at least 40% over its
-//     cost at the close, or at least 15% under it. The momentum exit cuts a
-//     fading bounce before the slower EMA cross catches the reversal; the
-//     wide stop keeps noise from selling a position at a local low. An exit
-//     the market refuses is sent again on the symbol's next bar while its
-//     reason still holds.
+//   - Exit, the whole position: EMA(8) crosses under EMA(21), or the position
+//     worth at least 40% over its cost at the close, or at least 15% under it.
+//     The wide stop keeps noise from selling a position at a local low; the
+//     trend cross does most of the exiting. An exit the market refuses is sent
+//     again on the symbol's next bar while its reason still holds.
 //   - Slots: at most 5 open positions. Each bar the entry candidates are
 //     ranked by 6-bar momentum, strongest first, and the best ones take the
-//     free slots. Stake per entry: equity / 5, capped by max_weight_bps of
+//     free slots. Stake per entry: equity / 7, capped by max_weight_bps of
 //     equity and by the cash this reply has not spent yet; below
 //     fees.min_notional_quote_units it buys nothing.
 //   - A reply carries the sells first, then the buys in momentum order, at
@@ -43,10 +41,11 @@ import { BPS, runBars, type Bar, type BarsState, type BuyInput, type SellInput }
 const FAST_BARS = 8;
 const SLOW_BARS = 21;
 const MOMENTUM_BARS = 6;
-/** Entry needs positive 6-bar momentum; exit also fires when it turns
- * clearly negative, before the slower EMA cross catches the reversal. */
-const MOMENTUM_MIN = 0;
-const MOMENTUM_EXIT = -0.01;
+/** Entry needs a real bounce, not a wiggle: 6-bar return above +1.5%. */
+const MOMENTUM_MIN = 0.015;
+/** Stake per entry: equity / 7. With at most 5 open positions the bot never
+ * goes all-in, so one bad leg costs less than a full slot would. */
+const STAKE_DIVISOR = 7n;
 /** take-profit +40%: worth 7/5 of its cost. */
 const TAKE = [7n, 5n] as const;
 /** stop-loss -15%: worth 17/20 of its cost. */
@@ -115,11 +114,10 @@ function push(bar: Bar): Series {
   return s;
 }
 
-/** Whether a held position exits on this close: trend turned down, momentum
- * turned clearly negative, or its value at the take-profit or the stop-loss. */
-function exits(state: BarsState, symbol: string, held: { qty: bigint; cost: bigint }, trendDown: boolean, momentum: number | null): boolean {
+/** Whether a held position exits on this close: trend turned down, or its
+ * value at the take-profit or the stop-loss. */
+function exits(state: BarsState, symbol: string, held: { qty: bigint; cost: bigint }, trendDown: boolean): boolean {
   if (trendDown) return true;
-  if (momentum !== null && momentum < MOMENTUM_EXIT) return true;
   const value = state.value(symbol, held.qty);
   return value * TAKE[1] >= held.cost * TAKE[0] || value * STOP[1] <= held.cost * STOP[0];
 }
@@ -147,14 +145,14 @@ await runBars({
     const heldCount = state.positions.size;
     for (const { symbol } of state.hello.symbols) {
       const held = state.positions.get(symbol);
-      if (held !== undefined && exits(state, symbol, held, down.has(symbol), series.get(symbol)?.momentum ?? null)) {
+      if (held !== undefined && exits(state, symbol, held, down.has(symbol))) {
         sells.push({ side: 'sell', symbol, qty: held.qty, max_slippage_bps: MAX_SLIPPAGE_BPS });
       }
     }
 
     const orders: (SellInput | BuyInput)[] = sells.slice(0, caps.max_orders_per_bar);
     const slots = Math.min(MAX_POSITIONS, caps.max_open_positions);
-    const stake = state.equity / BigInt(slots);
+    const stake = state.equity / STAKE_DIVISOR;
     const byWeight = (BigInt(caps.max_weight_bps) * state.equity) / BPS;
     let room = slots - heldCount;
     let cash = state.cash;
