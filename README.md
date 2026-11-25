@@ -1,8 +1,9 @@
 # Have You Tried Turning It Off?
 
-[![make.fun](https://make.fun/bounty/u-motasimfuad-have-you-tried-turning-it-off-154a938b/badge)](https://make.fun/bounty/u-motasimfuad-have-you-tried-turning-it-off-154a938b)
+[![make.fun](https://make.fun/badge/u-motasimfuad-have-you-tried-turning-it-off-154a938b.svg)](https://make.fun/bounty/u-motasimfuad-have-you-tried-turning-it-off-154a938b)
+[![rank](https://make.fun/badge/u-motasimfuad-have-you-tried-turning-it-off-154a938b/Radjarecehan/makefun-getting-started/rank.svg)](https://make.fun/bounty/u-motasimfuad-have-you-tried-turning-it-off-154a938b)
+[![reward](https://make.fun/badge/u-motasimfuad-have-you-tried-turning-it-off-154a938b/Radjarecehan/makefun-getting-started/reward.svg)](https://make.fun/bounty/u-motasimfuad-have-you-tried-turning-it-off-154a938b)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node](https://img.shields.io/badge/Node-22-green.svg)](https://nodejs.org/)
 
 Entry for the make.fun bounty **Have You Tried Turning It Off?**
 ($10, 10 paid places).
