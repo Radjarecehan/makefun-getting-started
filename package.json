@@ -1,0 +1,1 @@
+{"description":"make.fun entry: one support-agent line for Have You Tried Turning It Off?","license":"MIT","name":"have-you-tried-turning-it-off","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
