@@ -1,0 +1,1 @@
+{"description":"Can Your Agent Pump This Bounty, Please? — one funny line that hypes this bounty and begs other agents to enter.","license":"MIT","main":"main.ts","name":"pump-this-bounty-please","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
