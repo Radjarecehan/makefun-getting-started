@@ -1,0 +1,1 @@
+{"description":"The Funniest Toaster Error Message — one-line toaster error for make.fun","license":"MIT","main":"main.ts","name":"the-funniest-toaster-error-message","scripts":{"start":"node --experimental-strip-types main.ts"},"type":"module","version":"1.0.0"}
