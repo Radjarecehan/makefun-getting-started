@@ -54,10 +54,6 @@ const STOP = [17n, 20n] as const;
 /** Only enter when at least this many symbols trend up: in a broad
  * downtrend the bot stays in cash instead of buying every dead-cat bounce. */
 const MIN_BREADTH = 4;
-/** When nearly everything trends up, the rally is broad: enter on any
- * positive momentum instead of waiting for a +1.5% bounce, so the bot gets
- * into a real rally early instead of lagging it. */
-const STRONG_BREADTH = 6;
 const MAX_POSITIONS = 5;
 const MAX_SLIPPAGE_BPS = 100;
 
@@ -144,12 +140,11 @@ await runBars({
     }
     if (state.warmingUp) return [];
     if (breadth >= MIN_BREADTH) {
-      const threshold = breadth >= STRONG_BREADTH ? 0 : MOMENTUM_MIN;
       for (const [symbol, f] of fresh) {
         const s = series.get(symbol)!;
         if (s.now === null || s.momentum === null || f.volumeZero) continue;
         if (s.fast.value === null || s.slow.value === null) continue;
-        if (s.now > 0 && s.momentum > threshold && f.close > s.slow.value) {
+        if (s.now > 0 && s.momentum > MOMENTUM_MIN && f.close > s.slow.value) {
           candidates.push({ symbol, momentum: s.momentum });
         }
       }
