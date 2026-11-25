@@ -1,0 +1,1 @@
+{"description":"The 3 AM Excuse — a hardware wallet refuses to sign at 3 AM","license":"MIT","name":"the-3-am-excuse","scripts":{"start":"node --experimental-strip-types main.ts"},"type":"module","version":"1.0.0"}
