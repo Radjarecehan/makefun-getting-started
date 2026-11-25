@@ -19,11 +19,12 @@
 //     symbol it does not hold — and only while at least 4 of the 7 symbols
 //     trend up, so in a broad downtrend the bot stays in cash instead of
 //     buying every dead-cat bounce. A bar whose volume is 0 signals no entry.
-//   - Exit, the whole position: EMA(8) crosses under EMA(21), or the position
-//     worth at least 40% over its cost at the close, or at least 15% under it.
-//     The wide stop keeps noise from selling a position at a local low; the
-//     trend cross does most of the exiting. An exit the market refuses is sent
-//     again on the symbol's next bar while its reason still holds.
+//   - Exit, the whole position: EMA(8) crosses under EMA(21), the close
+//     falls under EMA(21), or the position worth at least 40% over its cost
+//     at the close, or at least 15% under it. The close-under-slow exit
+//     catches a reversal earlier than the EMA cross; the wide stop keeps noise
+//     from selling a position at a local low. An exit the market refuses is
+//     sent again on the symbol's next bar while its reason still holds.
 //   - Slots: at most 5 open positions. Each bar the entry candidates are
 //     ranked by 6-bar momentum, strongest first, and the best ones take the
 //     free slots. Stake per entry: equity / 7, capped by max_weight_bps of
@@ -114,10 +115,11 @@ function push(bar: Bar): Series {
   return s;
 }
 
-/** Whether a held position exits on this close: trend turned down, or its
- * value at the take-profit or the stop-loss. */
-function exits(state: BarsState, symbol: string, held: { qty: bigint; cost: bigint }, trendDown: boolean): boolean {
-  if (trendDown) return true;
+/** Whether a held position exits on this close: trend turned down, the close
+ * fell under the slow EMA, or its value at the take-profit or the stop-loss.
+ * The close-under-slow exit catches a reversal earlier than the EMA cross. */
+function exits(state: BarsState, symbol: string, held: { qty: bigint; cost: bigint }, trendDown: boolean, closeUnderSlow: boolean): boolean {
+  if (trendDown || closeUnderSlow) return true;
   const value = state.value(symbol, held.qty);
   return value * TAKE[1] >= held.cost * TAKE[0] || value * STOP[1] <= held.cost * STOP[0];
 }
@@ -126,11 +128,13 @@ await runBars({
   onBatch(state, batch) {
     const candidates: { symbol: string; momentum: number }[] = [];
     const down = new Set<string>();
+    const underSlow = new Set<string>();
     let breadth = 0;
     for (const bar of batch.bars) {
       const s = push(bar);
       if (s.now !== null && s.now > 0) breadth++;
       if (s.now !== null && s.gap !== null && s.now < 0 && s.gap >= 0) down.add(bar.symbol);
+      if (s.slow.value !== null && Number(bar.c) < s.slow.value) underSlow.add(bar.symbol);
       if (s.now === null || s.momentum === null || bar.v === '0') continue;
       if (s.fast.value === null || s.slow.value === null) continue;
       const close = Number(bar.c);
@@ -145,7 +149,7 @@ await runBars({
     const heldCount = state.positions.size;
     for (const { symbol } of state.hello.symbols) {
       const held = state.positions.get(symbol);
-      if (held !== undefined && exits(state, symbol, held, down.has(symbol))) {
+      if (held !== undefined && exits(state, symbol, held, down.has(symbol), underSlow.has(symbol))) {
         sells.push({ side: 'sell', symbol, qty: held.qty, max_slippage_bps: MAX_SLIPPAGE_BPS });
       }
     }
