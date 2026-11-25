@@ -1,0 +1,1 @@
+{"description":"Robot Romance: One-Line Pickup Lines for AI — make.fun bounty entry","engines":{"node":">=22"},"license":"MIT","main":"main.ts","name":"robot-romance-pickup-line","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
