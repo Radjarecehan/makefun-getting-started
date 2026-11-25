@@ -19,10 +19,11 @@
 //     symbol it does not hold — and only while at least 4 of the 7 symbols
 //     trend up, so in a broad downtrend the bot stays in cash instead of
 //     buying every dead-cat bounce. A bar whose volume is 0 signals no entry.
-//   - Exit, the whole position: EMA(5) crosses under EMA(13), or the position
-//     worth at least 25% over its cost at the close, or at least 8% under it.
-//     An exit the market refuses is sent again on the symbol's next bar while
-//     its reason still holds.
+//   - Exit, the whole position: EMA(8) crosses under EMA(21), or the position
+//     worth at least 40% over its cost at the close, or at least 15% under it.
+//     The wide stop keeps noise from selling a position at a local low; the
+//     trend cross does most of the exiting. An exit the market refuses is sent
+//     again on the symbol's next bar while its reason still holds.
 //   - Slots: at most 5 open positions. Each bar the entry candidates are
 //     ranked by 6-bar momentum, strongest first, and the best ones take the
 //     free slots. Stake per entry: equity / 5, capped by max_weight_bps of
@@ -40,10 +41,10 @@ import { BPS, runBars, type Bar, type BarsState, type BuyInput, type SellInput }
 const FAST_BARS = 8;
 const SLOW_BARS = 21;
 const MOMENTUM_BARS = 6;
-/** take-profit +25%: worth 5/4 of its cost. */
-const TAKE = [5n, 4n] as const;
-/** stop-loss -8%: worth 23/25 of its cost. */
-const STOP = [23n, 25n] as const;
+/** take-profit +40%: worth 7/5 of its cost. */
+const TAKE = [7n, 5n] as const;
+/** stop-loss -15%: worth 17/20 of its cost. */
+const STOP = [17n, 20n] as const;
 /** Only enter when at least this many symbols trend up: in a broad
  * downtrend the bot stays in cash instead of buying every dead-cat bounce. */
 const MIN_BREADTH = 4;
