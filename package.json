@@ -1,0 +1,1 @@
+{"engines":{"node":">=22"},"license":"MIT","name":"one-line-lights-out","private":true,"scripts":{"start":"node --experimental-strip-types main.ts"},"type":"module","version":"1.0.0"}
