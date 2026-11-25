@@ -41,6 +41,8 @@ import { BPS, runBars, type Bar, type BarsState, type BuyInput, type SellInput }
 const FAST_BARS = 8;
 const SLOW_BARS = 21;
 const MOMENTUM_BARS = 6;
+/** Entry needs a real bounce, not a wiggle: 6-bar return above +1.5%. */
+const MOMENTUM_MIN = 0.015;
 /** take-profit +40%: worth 7/5 of its cost. */
 const TAKE = [7n, 5n] as const;
 /** stop-loss -15%: worth 17/20 of its cost. */
@@ -128,7 +130,7 @@ await runBars({
       if (s.now === null || s.momentum === null || bar.v === '0') continue;
       if (s.fast.value === null || s.slow.value === null) continue;
       const close = Number(bar.c);
-      if (s.now > 0 && s.momentum > 0 && close > s.slow.value) {
+      if (s.now > 0 && s.momentum > MOMENTUM_MIN && close > s.slow.value) {
         candidates.push({ symbol: bar.symbol, momentum: s.momentum });
       }
     }
