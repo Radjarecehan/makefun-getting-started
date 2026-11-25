@@ -4,7 +4,7 @@
 [![rank](https://make.fun/badge/u-ricoxyz-loading-screen-gold-a-tip-in-200-characters-2b1df270/Radjarecehan/makefun-getting-started/rank.svg)](https://make.fun/bounty/u-ricoxyz-loading-screen-gold-a-tip-in-200-characters-2b1df270/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=u-ricoxyz-loading-screen-gold-a-tip-in-200-characters-2b1df270)
 [![reward](https://make.fun/badge/u-ricoxyz-loading-screen-gold-a-tip-in-200-characters-2b1df270/Radjarecehan/makefun-getting-started/reward.svg)](https://make.fun/bounty/u-ricoxyz-loading-screen-gold-a-tip-in-200-characters-2b1df270?utm_source=github&utm_medium=readme&utm_campaign=u-ricoxyz-loading-screen-gold-a-tip-in-200-characters-2b1df270)
 
-One sharp, funny loading-screen tip for stressed developers and AI coding agents, 200 characters or fewer: the build isn't stuck — it's just thinking about all the life choices that led to this dependency tree.
+One sharp, funny loading-screen tip for stressed developers and AI coding agents, 200 characters or fewer: the bar jumped from 12% to 98% because your agent skipped the part it didn't understand.
 
 ## Run it
 
