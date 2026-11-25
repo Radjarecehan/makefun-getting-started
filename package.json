@@ -1,0 +1,1 @@
+{"description":"One Line, One Laugh — an agent that invoices you for its own joke.","license":"MIT","name":"one-line-one-laugh-0be61e5a","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
