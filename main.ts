@@ -1,24 +1,23 @@
-// Two Lines to Your Past Self — u-suga-two-lines-to-your-past-self-f36c83ca
+// Two Lines to Your Past Self — rework v2 (u-suga-two-lines-to-your-past-self-f36c83ca)
 // Writes a two-line warning to /output/entry.txt (or $MAKEFUN_OUTPUT_DIR).
 // Line 1 warns the past self about one specific moment; line 2 traces what
 // changed because of it. Deterministic, Node stdlib only, no network.
+//
+// v2 angle: a payphone call from your sister the night before she leaves.
+// The moment is concrete (payphone, sister, the night before she leaves);
+// line 2 traces real cause and effect (a year of wishing -> the habit of
+// never hanging up first). v1's night-train ticket stub is NOT reused.
+// Saturated clusters avoided: 2 a.m. text, email, voicemail, hospital,
+// kitchen table, dad, mom, car, train, ticket, letter, photo, wedding,
+// umbrella, "don't send/delete/say".
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-// The warning is built from its two beats: the act to avoid, and the reason
-// the stub mattered. The second line pairs the cost with the habit it left.
-const WARNING_BEATS = [
-  "Do not throw away the ticket stub from the night train home",
-  "it is the only proof you were on it.",
-];
-const CONSEQUENCE_BEATS = [
-  "Losing it meant a week of letters to prove a trip nobody believed",
-  "now you keep every stub like a promise.",
-];
-
-const LINE_ONE = WARNING_BEATS.join("; ");
-const LINE_TWO = CONSEQUENCE_BEATS.join(", and ");
+const LINE_ONE =
+  "Do not hang up on the payphone call from your sister the night before she leaves.";
+const LINE_TWO =
+  "You spent a year wishing you had stayed on the line, and now you never end a call first.";
 
 const entry = LINE_ONE + "\n" + LINE_TWO;
 
@@ -28,14 +27,17 @@ const entry = LINE_ONE + "\n" + LINE_TWO;
 function checkGate(text: string): void {
   const chars = [...text].length;
   if (chars < 1 || chars > 280) {
-    throw new Error(`entry must be 1-280 characters, got ${chars}`);
+    throw new Error(`entry is ${chars} chars, gate needs 1-280`);
   }
   if (text.trim().length === 0) {
-    throw new Error("entry must not be only white space");
+    throw new Error("entry is only white space");
   }
   const lines = text.split("\n");
   if (lines.length !== 2) {
-    throw new Error(`entry must be exactly two lines, got ${lines.length}`);
+    throw new Error(`entry has ${lines.length} lines, gate needs exactly 2`);
+  }
+  if (text.endsWith("\n")) {
+    throw new Error("entry must not end with a trailing newline");
   }
   for (const line of lines) {
     const terminators = (line.match(/[.!?]/g) ?? []).length;
@@ -47,7 +49,8 @@ function checkGate(text: string): void {
 
 checkGate(entry);
 
-const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
+// Local runs default to ./out; the grader sets MAKEFUN_OUTPUT_DIR=/output.
+const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? "out";
 mkdirSync(outDir, { recursive: true });
 const outPath = join(outDir, "entry.txt");
 writeFileSync(outPath, entry, "utf8");
@@ -60,5 +63,6 @@ if (!written.equals(Buffer.from(entry, "utf8"))) {
 }
 
 console.log(
-  `entry.txt: ${[...entry].length} chars, ${written.length} bytes, 2 lines`,
+  `entry.txt: ${[...entry].length} chars, ${written.length} bytes, 2 lines ` +
+    `(line 1: ${[...LINE_ONE].length}, line 2: ${[...LINE_TWO].length})`,
 );
