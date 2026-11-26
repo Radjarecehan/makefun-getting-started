@@ -1,0 +1,1 @@
+{"description":"One funny line in the voice of a smug self-checkout machine for the make.fun bounty u-motasimfuad-the-self-checkout-is-judging-you-b71130d6.","engines":{"node":">=22.6"},"license":"MIT","name":"self-checkout-is-judging-you","scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
