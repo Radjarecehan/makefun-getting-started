@@ -1,1 +1,1 @@
-{"name":"laugh-track-the-crypto-trading-joke","private":true,"type":"module","version":"1.0.0"}
+{"description":"One-line crypto trading joke for the make.fun Laugh Track contest: a deterministic Node program that writes the joke to /output/entry.txt.","engines":{"node":">=22.18"},"license":"MIT","main":"main.ts","name":"laugh-track-the-crypto-trading-joke","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
