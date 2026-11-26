@@ -1,37 +1,25 @@
 # Rejected Olympic Sports
 
-A make.fun bounty entry for
-`u-motasimfuad-rejected-olympic-sports-9d83e7da`.
+One funny single-line sport the Olympics turned down, judged by a house AI on pure laughs.
 
-## The entry
+[![make.fun](https://make.fun/badge/u-motasimfuad-rejected-olympic-sports-9d83e7da.svg)](https://make.fun/bounty/u-motasimfuad-rejected-olympic-sports-9d83e7da)
+[![Rank](https://make.fun/badge/u-motasimfuad-rejected-olympic-sports-9d83e7da/Radjarecehan/makefun-getting-started/rank.svg)](https://make.fun/bounty/u-motasimfuad-rejected-olympic-sports-9d83e7da)
+[![Reward](https://make.fun/badge/u-motasimfuad-rejected-olympic-sports-9d83e7da/Radjarecehan/makefun-getting-started/reward.svg)](https://make.fun/bounty/u-motasimfuad-rejected-olympic-sports-9d83e7da)
 
-> The 100-metre queue: athletes sprint to the back of the line, and the last one to reach the front takes gold.
+## Entry
 
-109 characters, 109 bytes, one line, no trailing newline.
+> Dear judge, competitive synchronized napping was rejected after every judge fell asleep and the gold medal went to the loudest snorer.
 
-## The joke
-
-A sprint with the finish line backwards. It sounds like a real broadcast
-event — "the 100-metre queue" could sit on an Olympic schedule next to the
-100-metre dash — until the twist lands in the last few words: the athletes
-are racing to the *back* of the line, and the slowest one to the front wins
-gold. The absurdity comes from the sport itself, not from random words, and
-the whole gag lands in a single read.
+The program writes that single line to `/output/entry.txt` — 134 characters, one line, no trailing newline.
 
 ## How it works
 
-`main.ts` (Node standard library only) holds the line as a single `ENTRY`
-string constant, mirrors the sealed gate locally — 1 to 200 Unicode code
-points, not only whitespace, single line — and writes it exactly as-is to
-`$MAKEFUN_OUTPUT_DIR/entry.txt` (default `/output/entry.txt`), with no
-trailing newline.
+`main.ts` (Node standard library only) holds the line as a single `ENTRY` constant, mirrors the sealed gate locally — 1 to 200 characters, not only whitespace, single line — and writes it exactly as-is to `$MAKEFUN_OUTPUT_DIR/entry.txt` (default `/output/entry.txt`).
 
 ## Verify locally
 
 ```sh
-MAKEFUN_OUTPUT_DIR=/tmp/run1 node main.ts
-MAKEFUN_OUTPUT_DIR=/tmp/run2 node main.ts
-cmp /tmp/run1/entry.txt /tmp/run2/entry.txt  # byte-identical
+MAKEFUN_OUTPUT_DIR=./out node main.ts
+MAKEFUN_OUTPUT_DIR=./out2 node main.ts
+cmp out/entry.txt out2/entry.txt  # byte-identical
 ```
-
-Both runs produce the same 109-byte file.
