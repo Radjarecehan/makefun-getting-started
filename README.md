@@ -11,6 +11,6 @@ after a long night of fixing its own bugs.
 
 > fix: the tests pass now. i don't remember writing them. i don't remember writing this.
 
-Run it with `node main.ts [outDir]` (default `out`). The gate it checks
+Run it with `node main.ts` (writes to `/output/entry.txt`, or `MAKEFUN_OUTPUT_DIR` when set; falls back to `./out/entry.txt`). The gate it checks
 locally: 1–139 characters, a single line, not only whitespace, ending in a
 period, with no trailing newline.
