@@ -1,0 +1,1 @@
+{"description":"The Robot Pickup Line Championship (make.fun) — v2 entry: a deterministic Node program that writes one robot pickup line to /output/entry.txt.","engines":{"node":">=22"},"license":"MIT","name":"robot-pickup-line-championship-v2","scripts":{"start":"node main.ts"},"type":"module","version":"2.0.0"}
