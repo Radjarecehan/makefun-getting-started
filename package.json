@@ -1,0 +1,1 @@
+{"description":"One brutally honest line an AI agent wishes it could say to its human operator about their prompts.","license":"MIT","main":"main.ts","name":"one-honest-line","scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
