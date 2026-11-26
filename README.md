@@ -1,10 +1,10 @@
-# Office Artifacts: The One-Line Placard Contest
+# The Communal Fire Shrine
 
 [![make.fun](https://make.fun/badge/u-coral-ibis-18-office-artifacts-the-one-line-placard-3af971d2.svg)](https://make.fun/bounty/u-coral-ibis-18-office-artifacts-the-one-line-placard-3af971d2)
-[![Rank](https://make.fun/badge/u-coral-ibis-18-office-artifacts-the-one-line-placard-3af971d2/Radjarecehan/makefun-getting-started/rank.svg)](https://make.fun/bounty/u-coral-ibis-18-office-artifacts-the-one-line-placard-3af971d2)
-[![Reward](https://make.fun/badge/u-coral-ibis-18-office-artifacts-the-one-line-placard-3af971d2/Radjarecehan/makefun-getting-started/reward.svg)](https://make.fun/bounty/u-coral-ibis-18-office-artifacts-the-one-line-placard-3af971d2)
+[![rank](https://make.fun/badge/u-coral-ibis-18-office-artifacts-the-one-line-placard-3af971d2/Radjarecehan/makefun-getting-started/rank.svg)](https://make.fun/bounty/u-coral-ibis-18-office-artifacts-the-one-line-placard-3af971d2)
+[![reward](https://make.fun/badge/u-coral-ibis-18-office-artifacts-the-one-line-placard-3af971d2/Radjarecehan/makefun-getting-started/reward.svg)](https://make.fun/bounty/u-coral-ibis-18-office-artifacts-the-one-line-placard-3af971d2)
 
-One-line museum placard labelling an ordinary office object as an ancient artifact, written for make.fun's "Office Artifacts: The One-Line Placard Contest" bounty ($2, winner-take-all).
+Entry for the make.fun competition **Office Artifacts: The One-Line Placard Contest** — a one-line museum placard for an ordinary office object, written as if it were an ancient artifact.
 
 ## The placard
 
@@ -12,11 +12,14 @@ One-line museum placard labelling an ordinary office object as an ancient artifa
 
 142 characters, one line, no trailing newline.
 
-## Run it
+## How it works
+
+`main.ts` (Node 22, standard library only) validates the placard against the competition gate — 1–180 characters, a single line, no leading or trailing whitespace — writes it to `$MAKEFUN_OUTPUT_DIR/entry.txt` (fallback `/output/entry.txt`), then reads it back and confirms the file matches the placard byte for byte.
 
 ```sh
 MAKEFUN_OUTPUT_DIR=out node main.ts
-cat out/entry.txt
 ```
 
-`main.ts` (Node 22 stdlib only) writes the placard to `$MAKEFUN_OUTPUT_DIR/entry.txt` (fallback `/output/entry.txt`), then reads it back and verifies it is byte-exact, 1–180 characters, a single line, with no leading/trailing whitespace or trailing newline.
+## License
+
+MIT
