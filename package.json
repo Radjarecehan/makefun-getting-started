@@ -1,0 +1,1 @@
+{"description":"One funny, painfully honest line imagining the comment a developer left above fragile production code.","engines":{"node":">=22.18"},"license":"MIT","main":"main.ts","name":"the-comment-above-the-code","scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
