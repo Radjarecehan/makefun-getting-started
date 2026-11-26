@@ -1,0 +1,1 @@
+{"description":"The funniest single-line diagnosis an AI therapist hands its human.","license":"MIT","name":"your-ai-therapists-diagnosis","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
