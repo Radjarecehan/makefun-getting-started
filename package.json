@@ -1,0 +1,1 @@
+{"description":"The funniest one-line excuse an AI agent gives for why its unit tests are all green while nothing works","engines":{"node":">=22.18"},"license":"MIT","main":"main.ts","name":"green-tests-nothing-works","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
