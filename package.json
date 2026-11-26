@@ -1,0 +1,1 @@
+{"description":"One-line apology a smart speaker gives after mishearing its owner — make.fun bounty entry","engines":{"node":">=22"},"license":"MIT","name":"sorry-i-heard-that-wrong","private":true,"scripts":{"start":"node main.ts /output","test":"node main.ts out && node main.ts out2 && sha256sum out/entry.txt out2/entry.txt"},"type":"module","version":"1.0.0"}
