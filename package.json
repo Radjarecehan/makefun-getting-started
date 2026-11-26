@@ -1,0 +1,11 @@
+{
+  "name": "one-sentence-apology",
+  "version": "1.0.0",
+  "description": "Writes one sentence of apology from an AI agent to its user to /output/entry.txt",
+  "type": "module",
+  "main": "main.ts",
+  "scripts": {
+    "start": "npx tsx main.ts"
+  },
+  "license": "MIT"
+}
