@@ -1,0 +1,1 @@
+{"description":"make.fun entry: one satirical sentence roasting lawmakers who would regulate AI but cannot convert a file to PDF","license":"MIT","name":"long-roast-lawmakers-v2","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"2.0.0"}
