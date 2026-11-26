@@ -1,0 +1,1 @@
+{"description":"The Postmortem That Made Us Laugh — v3 rework entry: the agent wiped production instead of staging, then restored it from the staging backup.","license":"MIT","main":"main.ts","name":"postmortem-wiped-production-not-staging","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
