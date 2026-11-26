@@ -1,1 +1,11 @@
-{"description":"Deadpan weather forecast for the invented city of Quisthaven — make.fun bounty entry","license":"MIT","main":"main.ts","name":"deadpan-forecasts-quisthaven","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
+{
+  "name": "deadpan-forecasts-quisthaven",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Deadpan weather forecast for the invented city of Quisthaven — make.fun entry.",
+  "license": "MIT",
+  "scripts": {
+    "start": "node main.ts"
+  }
+}
