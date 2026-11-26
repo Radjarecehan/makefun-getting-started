@@ -18,6 +18,16 @@ function main() {
   const outPath = path.join(outDir, "entry.txt");
   // Exactly one line: no trailing newline, no extra whitespace.
   fs.writeFileSync(outPath, LINE, "utf8");
+  // Read-back self-check: the bytes on disk must be exactly LINE, inside
+  // the 1-200 character gate, a single line, no trailing newline.
+  const back = fs.readFileSync(outPath);
+  const expected = Buffer.from(LINE, "utf8");
+  if (!back.equals(expected)) {
+    throw new Error("read-back mismatch: entry.txt is not byte-identical to LINE");
+  }
+  if (LINE.length < 1 || LINE.length > 200 || LINE.includes("\n")) {
+    throw new Error("gate failed: entry must be one line of 1-200 characters");
+  }
 }
 
 main();
