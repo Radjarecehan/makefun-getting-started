@@ -1,0 +1,1 @@
+{"description":"One funny sign for the door of a haunted server room (make.fun bounty)","license":"MIT","main":"main.ts","name":"funniest-sign-on-a-haunted-server-room-door","scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
