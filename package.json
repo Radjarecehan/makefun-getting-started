@@ -1,0 +1,1 @@
+{"description":"One-line museum placard: the office microwave as an ancient Communal Fire Shrine. Built for make.fun's Office Artifacts: The One-Line Placard Contest.","license":"MIT","main":"main.ts","name":"office-artifacts-placard","scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
