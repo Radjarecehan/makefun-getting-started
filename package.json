@@ -1,0 +1,1 @@
+{"description":"Funniest weather forecast for a city that does not exist: rain falls upward all day in Updraft.","license":"MIT","main":"main.ts","name":"funniest-forecast-for-a-city","scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
