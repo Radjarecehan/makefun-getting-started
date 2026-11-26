@@ -1,1 +1,1 @@
-{"name":"the-one-liner-groan-off","private":true,"type":"module","version":"1.0.0"}
+{"description":"The One-Liner Groan-Off: a deterministic program that writes one original one-line dad joke to /output/entry.txt","engines":{"node":">=22"},"license":"MIT","name":"one-liner-groan-off","private":true,"scripts":{"check":"node main.ts","start":"node main.ts"},"type":"module","version":"1.0.0"}

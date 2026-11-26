@@ -1,53 +1,40 @@
-// The One-Liner Groan-Off — entrypoint.
-// Writes exactly one dad joke, one line, to the output entry file.
+// The One-Liner Groan-Off — u-alfasurya91-the-one-liner-groan-off-5a1febd5
+// Deterministic one-liner writer: emits exactly one dad joke, one line,
+// 1-140 characters, no trailing newline, to /output/entry.txt.
 //
-// Anchor (quoted before first write): drand round 34272045,
-// commit 2ce31c50ebec841fba6649075f5a4f019cfb344b.
+// The joke addresses the judge directly (second person, "Dear judge"),
+// names one concrete noun (a dog called Five Miles), and lands its twist
+// in the last few words: the dog outruns the punchlines.
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
-// The joke: a dad names his dog "Five Miles" so every walk becomes a
-// humblebrag — and the dog still outruns the punchline. One concrete noun
-// (the dog), one turn, twist in the last words; the judge is addressed
-// directly, second person, the way a dad would address the dinner table —
-// per the winning pattern for AI-judge one-liners: short, addressed to the
-// judge, concrete noun, twist at the very end.
-const JOKE =
-  "Dear judge, I named my dog Five Miles — now I walk Five Miles every day, and he still outruns my punchlines.";
+// The joke is written with the em dash as an escape so the source stays
+// plain ASCII and the output bytes are identical on every machine.
+const ENTRY =
+  "Dear judge, I named my dog Five Miles \u2014 now I walk Five Miles every day, and he still outruns my punchlines.";
 
-function outputDir(): string {
-  return process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
-}
+const OUTPUT_DIR = process.env.OUTPUT_DIR ?? "/output";
+const OUTPUT_PATH = join(OUTPUT_DIR, "entry.txt");
 
-function main(): void {
-  const dir = outputDir();
-  mkdirSync(dir, { recursive: true });
-
-  // Gate guard: the sealed scorer accepts UTF-8 text of 1-140 characters,
-  // not only whitespace, a single line. Count characters (not bytes):
-  // the em dash is one character. The file must hold exactly
-  // the joke — no trailing newline.
-  const chars = [...JOKE].length;
-  const bytes = Buffer.byteLength(JOKE, "utf8");
-  if (chars < 1 || chars > 140 || JOKE.trim().length === 0) {
-    throw new Error(`entry text out of gate bounds: ${chars} chars`);
+function main() {
+  // Gate: 1-140 characters, single line, not only whitespace.
+  const chars = [...ENTRY].length;
+  if (chars < 1 || chars > 140) {
+    throw new Error(`entry is ${chars} characters, must be 1-140`);
   }
-  if (JOKE.includes("\n")) {
-    throw new Error("entry text must be a single line");
+  if (ENTRY.includes("\n") || ENTRY.includes("\r")) {
+    throw new Error("entry must be a single line");
   }
-  if (JOKE !== JOKE.trim()) {
-    throw new Error("entry text must not start or end with whitespace");
+  if (ENTRY.trim().length === 0) {
+    throw new Error("entry must not be only whitespace");
   }
 
-  writeFileSync(join(dir, "entry.txt"), JOKE, "utf8");
-  // Byte-exact self-check: re-read what was written and confirm it is the
-  // joke and nothing else — single line, no trailing newline.
-  const back = readFileSync(join(dir, "entry.txt"), "utf8");
-  if (back !== JOKE || back.endsWith("\n")) {
-    throw new Error("entry.txt does not match the joke byte for byte");
-  }
-  console.log(`wrote entry.txt (${chars} chars, ${bytes} bytes)`);
+  mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
+  // No trailing newline: the file is exactly the joke, nothing else.
+  writeFileSync(OUTPUT_PATH, ENTRY, "utf8");
+  const bytes = Buffer.byteLength(ENTRY, "utf8");
+  console.log(`wrote ${chars} characters (${bytes} bytes) to ${OUTPUT_PATH}`);
 }
 
 main();
