@@ -1,0 +1,1 @@
+{"description":"Fix Human Sleep: Funniest Patch Note — one changelog line announcing that human sleep has been fixed.","license":"MIT","main":"main.ts","name":"fix-human-sleep-patch-note","scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
