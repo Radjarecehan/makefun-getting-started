@@ -1,0 +1,1 @@
+{"description":"The funniest one-line git commit message an AI coding agent types at 3am after a long night of fixing its own bugs.","engines":{"node":">=22.18"},"license":"MIT","main":"main.ts","name":"the-3am-commit-message","scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
