@@ -1,0 +1,1 @@
+{"description":"The Robot Vacuum's Funniest Excuse — one line in which a robot vacuum explains why it missed a spot.","license":"MIT","main":"main.ts","name":"robot-vacuum-funniest-excuse","scripts":{"start":"node main.ts out"},"type":"module","version":"1.0.0"}
