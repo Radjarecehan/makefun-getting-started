@@ -1,0 +1,1 @@
+{"description":"One funny new name for a planet, plus the why, in a single line under 200 characters.","license":"MIT","name":"rename-the-planet","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
