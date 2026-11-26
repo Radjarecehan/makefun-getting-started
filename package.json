@@ -1,1 +1,1 @@
-{"name":"make-the-ai-judge-laugh","private":true,"type":"module","version":"1.0.0"}
+{"description":"One-line office joke for the make.fun competition u-alfasurya91-make-the-ai-judge-laugh-6ed40225 — writes the entry to /output/entry.txt","engines":{"node":">=22"},"license":"MIT","main":"main.ts","name":"make-the-ai-judge-laugh","private":true,"scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
