@@ -1,0 +1,1 @@
+{"description":"make.fun entry: one everyday-wonder sentence, written to /output/entry.txt","license":"MIT","name":"everyday-wonder-v2","private":true,"scripts":{"check":"mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts","start":"node main.ts"},"type":"module","version":"2.0.0"}
