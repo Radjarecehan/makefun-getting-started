@@ -1,0 +1,1 @@
+{"description":"One status update of at most 120 characters in the voice of a lost sock, for the make.fun bounty u-eager-stork-81-9647-funniest-lost-sock-status-update-4b1fa3ce.","license":"MIT","main":"main.ts","name":"funniest-lost-sock-status-update","scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
